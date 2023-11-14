@@ -1,6 +1,8 @@
 import datetime
 import strawberry
 from typing import List, Optional, Union, Annotated
+import uuid
+
 import gql_ug.GraphTypeDefinitions
 
 def getLoader(info):
@@ -71,6 +73,51 @@ class RoleGQLModel:
 #
 #####################################################################
 
+@strawberry.field()
+async def role_by_user(self, info: strawberry.types.Info, user_id: uuid.UUID) -> List["RoleGQLModel"]:
+    loader = getLoader(info).roles
+    rows = await loader.filter_by(user_id=f"{user_id}")
+    return rows
+
+
+from gql_ug.DBDefinitions import (
+    UserModel, MembershipModel, GroupModel, RoleModel
+)
+from sqlalchemy import select
+
+@strawberry.field()
+async def roles_on_user(self, info: strawberry.types.Info, user_id: strawberry.ID) -> List["RoleGQLModel"]:
+    loaderm = getLoader(info).memberships
+    rows = await loaderm.filter_by(user_id = user_id)
+    groupids = [row.group_id for row in rows]
+    print("groupids", groupids)
+    stmt = (
+        select(RoleModel).
+        where(RoleModel.group_id.in_(groupids))
+    )
+    loader = getLoader(info).roles
+    rows = await loader.execute_select(stmt)
+    return rows
+
+@strawberry.field()
+async def roles_on_group(self, info: strawberry.types.Info, group_id: strawberry.ID) -> List["RoleGQLModel"]:
+    gloader = getLoader(info).groups
+    groupids = []
+    cid = group_id
+    while cid is not None:
+        row = await gloader.load(cid)
+        if row is None:
+            break
+        groupids.append(row.id)
+        cid = row.mastergroup_id
+    print("groupids", groupids)
+    stmt = (
+        select(RoleModel).
+        where(RoleModel.group_id.in_(groupids))
+    )
+    loader = getLoader(info).roles
+    rows = await loader.execute_select(stmt)
+    return rows
 #####################################################################
 #
 # Mutation section

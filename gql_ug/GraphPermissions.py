@@ -38,26 +38,26 @@ async def getUserFromHeaders(headers):
             "email": "john.newbie@world.com",
             "roles": [
                 {
-                "valid": True,
-                "group": {
-                    "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                    "name": "Uni"
-                },
-                "roletype": {
-                    "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
-                    "name": "administrátor"
-                }
+                    "valid": True,
+                    "group": {
+                        "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                        "name": "Uni"
+                    },
+                    "roletype": {
+                        "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
+                        "name": "administrátor"
+                    }
                 },
                 {
-                "valid": True,
-                "group": {
-                    "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
-                    "name": "Uni"
-                },
-                "roletype": {
-                    "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
-                    "name": "rektor"
-                }
+                    "valid": True,
+                    "group": {
+                        "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                        "name": "Uni"
+                    },
+                    "roletype": {
+                        "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
+                        "name": "rektor"
+                    }
                 }
             ]
         }

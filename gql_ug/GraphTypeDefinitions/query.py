@@ -38,3 +38,12 @@ class Query:
 
     from .groupTypeGQLModel import group_type_page
     group_type_page = group_type_page
+
+    from .roleGQLModel import role_by_user
+    role_by_user = role_by_user
+
+    from .roleGQLModel import roles_on_group
+    roles_on_group = roles_on_group
+
+    from .roleGQLModel import roles_on_user
+    roles_on_user = roles_on_user

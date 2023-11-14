@@ -917,7 +917,7 @@ def get_demodata():
         return json_dict
 
 
-    with open("./systemdata.json", "r") as f:
+    with open("./systemdata.json", "r", encoding="utf-8") as f:
         jsonData = json.load(f, object_hook=datetime_parser)
 
     return jsonData
@@ -925,13 +925,7 @@ def get_demodata():
 async def initDB(asyncSessionMaker):
 
     defaultNoDemo = "False"
-    if defaultNoDemo == os.environ.get("DEMO", defaultNoDemo):
-        dbModels = [
-            GroupTypeModel, 
-            RoleCategoryModel,
-            RoleTypeModel,
-        ]
-    else:
+    if "true" == os.environ.get("DEMO", "true"):
         dbModels = [
             GroupTypeModel, 
             RoleCategoryModel,
@@ -940,7 +934,14 @@ async def initDB(asyncSessionMaker):
             GroupModel,
             MembershipModel,
             RoleModel,
+        ]        
+    else:
+        dbModels = [
+            GroupTypeModel, 
+            RoleCategoryModel,
+            RoleTypeModel,
         ]
+        
 
     jsonData = get_demodata()
     await ImportModels(asyncSessionMaker, dbModels, jsonData)
