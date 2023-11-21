@@ -1,7 +1,19 @@
 import datetime
 import strawberry
+import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
+from .BaseGQLModel import BaseGQLModel
+
+from ._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby
+)
 
 def getLoader(info):
     return info.context["all"]
@@ -13,24 +25,13 @@ UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
     keys=["id"],
     description="""Entity representing a relation between an user and a group""",
 )
-class MembershipGQLModel:
-    @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
-        if id is None: return None
-        loader = getLoader(info).memberships
-        result = await loader.load(id)
-        if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
-            result.__strawberry_definition__ = cls._type_definition # some version of strawberry changed :(
-        return result
+class MembershipGQLModel(BaseGQLModel):
 
-    @strawberry.field(description="""primary key""")
-    def id(self) -> strawberry.ID:
-        return self.id
-
-    @strawberry.field(description="""time stamp""")
-    def lastchange(self) -> datetime.datetime:
-        return self.lastchange
+    id = resolve_id
+    changedby = resolve_changedby
+    created = resolve_created
+    lastchange = resolve_lastchange
+    createdby = resolve_createdby
 
     @strawberry.field(description="""user""")
     async def user(self, info: strawberry.types.Info) -> Optional["UserGQLModel"]:
@@ -71,7 +72,7 @@ import datetime
 
 @strawberry.input
 class MembershipUpdateGQLModel:
-    id: strawberry.ID
+    id: uuid.UUID
     lastchange: datetime.datetime   
     valid: Optional[bool] = None
     startdate: Optional[datetime.datetime] = None
@@ -79,16 +80,16 @@ class MembershipUpdateGQLModel:
 
 @strawberry.input
 class MembershipInsertGQLModel:
-    user_id: strawberry.ID
-    group_id: strawberry.ID
-    id: Optional[strawberry.ID] = None
+    user_id: uuid.UUID
+    group_id: uuid.UUID
+    id: Optional[uuid.UUID] = None
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
 
 @strawberry.type
 class MembershipResultGQLModel:
-    id: strawberry.ID = None
+    id: uuid.UUID = None
     msg: str = None
 
     @strawberry.field(description="""Result of membership operation""")

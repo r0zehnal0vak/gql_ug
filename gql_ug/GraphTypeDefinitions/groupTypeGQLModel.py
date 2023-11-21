@@ -1,8 +1,19 @@
 import datetime
 import strawberry
+import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
+from .BaseGQLModel import BaseGQLModel
 
+from ._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby
+)
 
 def getLoader(info):
     return info.context["all"]
@@ -12,32 +23,15 @@ GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a group type (like Faculty)"""
 )
-class GroupTypeGQLModel:
-    @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
-        if id is None: return None
-        loader = getLoader(info).grouptypes
-        result = await loader.load(id)
-        if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
-            result.__strawberry_definition__ = cls._type_definition # some version of strawberry changed :(
-            return result
+class GroupTypeGQLModel(BaseGQLModel):
         
-    @strawberry.field(description="""Primary key""")
-    def id(self) -> strawberry.ID:
-        return self.id
-
-    @strawberry.field(description="""""")
-    def lastchange(self) -> strawberry.ID:
-        return self.lastchange
-
-    @strawberry.field(description="""Group type name CZ""")
-    def name(self) -> str:
-        return self.name
-
-    @strawberry.field(description="""Group type name EN""")
-    def name_en(self) -> str:
-        return self.name_en
+    id = resolve_id
+    name = resolve_name
+    name_en = resolve_name_en
+    changedby = resolve_changedby
+    created = resolve_created
+    lastchange = resolve_lastchange
+    createdby = resolve_createdby
 
     @strawberry.field(description="""List of groups which have this type""")
     async def groups(
@@ -63,7 +57,7 @@ async def group_type_page(
 
 @strawberry.field(description="""Finds a group type by its id""")
 async def group_type_by_id(
-    self, info: strawberry.types.Info, id: strawberry.ID
+    self, info: strawberry.types.Info, id: uuid.UUID
 ) -> Union[GroupTypeGQLModel, None]:
     # result = await resolveGroupTypeById(session,  id)
     result = await GroupTypeGQLModel.resolve_reference(info, id)
@@ -78,20 +72,20 @@ import datetime
 
 @strawberry.input
 class GroupTypeUpdateGQLModel:
-    id: strawberry.ID
+    id: uuid.UUID
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
 
 @strawberry.input
 class GroupTypeInsertGQLModel:
-    id: Optional[strawberry.ID] = None
+    id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     name_en: Optional[str] = None
 
 @strawberry.type
 class GroupTypeResultGQLModel:
-    id: strawberry.ID = None
+    id: uuid.UUID = None
     msg: str = None
 
     @strawberry.field(description="""Result of grouptype operation""")

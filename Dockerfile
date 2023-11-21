@@ -1,5 +1,5 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.9-slim-buster as prepare
+FROM python:3.10.13-slim as prepare
 
 # instalace curl, aby bylo mozne zprovoznit standardni healthcheck
 RUN apt update && apt install curl -y && rm -rf /var/cache/apk/*

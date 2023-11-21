@@ -1,8 +1,19 @@
 import datetime
 import strawberry
 import asyncio
+import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
+from .BaseGQLModel import BaseGQLModel
+from ._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby
+)
 
 def getLoader(info):
     return info.context["all"]
@@ -19,24 +30,14 @@ GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 from ..GraphPermissions import UserGDPRPermission
 
 @strawberry.federation.type(keys=["id"], description="""Entity representing a user""")
-class UserGQLModel:
-    @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
-        # userloader = info.context['users']
-        loader = getLoader(info).users
-        result = await loader.load(id)
-        if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
-            result.__strawberry_definition__ = cls._type_definition # some version of strawberry changed :(
-        return result
+class UserGQLModel(BaseGQLModel):
 
-    @strawberry.field(description="""Entity primary key""")
-    def id(self, info: strawberry.types.Info) -> strawberry.ID:
-        return self.id
-
-    @strawberry.field(description="""User's name (like John)""")
-    def name(self) -> str:
-        return self.name
+    id = resolve_id
+    name = resolve_name
+    changedby = resolve_changedby
+    created = resolve_created
+    lastchange = resolve_lastchange
+    createdby = resolve_createdby
 
     @strawberry.field(description="""User's family name (like Obama)""")
     def surname(self) -> str:
@@ -49,10 +50,6 @@ class UserGQLModel:
     @strawberry.field(description="""User's validity (if their are member of institution)""")
     def valid(self) -> bool:
         return self.valid
-
-    @strawberry.field(description="""Time stamp""")
-    def lastchange(self) -> Union[datetime.datetime, None]:
-        return self.lastchange
 
     @strawberry.field(description="""GDPRInfo for permision test""", permission_classes=[UserGDPRPermission])
     def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
@@ -78,7 +75,7 @@ class UserGQLModel:
         description="""List of groups given type, where the user is member"""
     )
     async def member_of(
-        self, grouptype_id: strawberry.ID, info: strawberry.types.Info
+        self, grouptype_id: uuid.UUID, info: strawberry.types.Info
     ) -> List["GroupGQLModel"]:
         loader = getLoader(info).memberships
         rows = await loader.filter_by(user_id=self.id)# , grouptype_id=grouptype_id)
@@ -103,7 +100,7 @@ async def user_page(
 
 @strawberry.field(description="""Finds an user by their id""")
 async def user_by_id(
-    self, info: strawberry.types.Info, id: strawberry.ID
+    self, info: strawberry.types.Info, id: uuid.UUID
 ) -> Union[UserGQLModel, None]:
     result = await UserGQLModel.resolve_reference(info=info, id=id)
     return result
@@ -136,8 +133,8 @@ from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
 async def users_by_group_and_role_type(
     self,
     info: strawberry.types.Info,
-    group_id: strawberry.ID,
-    role_type_id: strawberry.ID,
+    group_id: uuid.UUID,
+    role_type_id: uuid.UUID,
 ) -> List[UserGQLModel]:
     # result = await resolveUserByRoleTypeAndGroup(session,  group_id, role_type_id)
     loader = getLoader(info).users
@@ -154,7 +151,7 @@ import datetime
 
 @strawberry.input
 class UserUpdateGQLModel:
-    id: strawberry.ID
+    id: uuid.UUID
     lastchange: datetime.datetime  # razitko
     name: Optional[str] = None
     surname: Optional[str] = None
@@ -163,7 +160,7 @@ class UserUpdateGQLModel:
 
 @strawberry.input
 class UserInsertGQLModel:
-    id: Optional[strawberry.ID] = None
+    id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     surname: Optional[str] = None
     email: Optional[str] = None
@@ -171,7 +168,7 @@ class UserInsertGQLModel:
 
 @strawberry.type
 class UserResultGQLModel:
-    id: strawberry.ID = None
+    id: uuid.UUID = None
     msg: str = None
 
     @strawberry.field(description="""Result of user operation""")
