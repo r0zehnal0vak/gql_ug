@@ -24,6 +24,9 @@ GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
     keys=["id"], description="""Entity representing a group type (like Faculty)"""
 )
 class GroupTypeGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).grouptypes
         
     id = resolve_id
     name = resolve_name

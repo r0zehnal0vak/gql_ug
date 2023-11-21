@@ -27,6 +27,9 @@ RoleTypeGQLModel = Annotated["RoleTypeGQLModel", strawberry.lazy(".roleTypeGQLMo
     description="""Entity representing a role of a user in a group (like user A in group B is Dean)""",
 )
 class RoleGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).roles
 
     id = resolve_id
     name = resolve_name

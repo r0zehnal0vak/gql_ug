@@ -23,6 +23,9 @@ RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
     keys=["id"], description="""Entity representing a role type (like Dean)"""
 )
 class RoleTypeGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).roletypes
 
     id = resolve_id
     name = resolve_name

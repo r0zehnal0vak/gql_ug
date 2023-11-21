@@ -23,6 +23,9 @@ RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
 
 @strawberry.federation.type(keys=["id"], description="""Entity representing a group""")
 class GroupGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).groups
 
     id = resolve_id
     name = resolve_name

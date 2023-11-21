@@ -26,6 +26,9 @@ UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
     description="""Entity representing a relation between an user and a group""",
 )
 class MembershipGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).memberships
 
     id = resolve_id
     changedby = resolve_changedby

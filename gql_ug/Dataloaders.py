@@ -1,4 +1,10 @@
+import logging
 from uoishelpers.dataloaders import createIdLoader, createFkeyLoader
+import datetime
+import aiohttp
+import asyncio
+import os
+from aiodataloader import DataLoader
 
 from gql_ug.DBDefinitions import (
     UserModel,
@@ -9,6 +15,128 @@ from gql_ug.DBDefinitions import (
     RoleTypeModel,
     RoleCategoryModel
 )
+
+from uoishelpers.resolvers import select, update, delete
+
+
+def prepareSelect(model, where: dict):   
+    usedTables = [model.__tablename__]
+    from sqlalchemy import select, and_, or_
+    baseStatement = select(model)
+    # stmt = select(GroupTypeModel).join(GroupTypeModel.groups.property.target).filter(GroupTypeModel.groups.property.target.c.name == "22-5KB")
+    # type(GroupTypeModel.groups.property) sqlalchemy.orm.relationships.RelationshipProperty
+    # GroupTypeModel.groups.property.entity.class_
+    def limitDict(input):
+        if isinstance(input, list):
+            return [limitDict(item) for item in input]
+        if not isinstance(input, dict):
+            # print("limitDict", input)
+            return input
+        result = {key: limitDict(value) if isinstance(value, dict) else value for key, value in input.items() if value is not None}
+        return result
+    
+    def convertAnd(model, name, listExpr):
+        assert len(listExpr) > 0, "atleast one attribute in And expected"
+        results = [convertAny(model, w) for w in listExpr]
+        return and_(*results)
+
+    def convertOr(model, name, listExpr):
+        # print("enter convertOr", listExpr)
+        assert len(listExpr) > 0, "atleast one attribute in Or expected"
+        results = [convertAny(model, w) for w in listExpr]
+        return or_(*results)
+
+    def convertAttributeOp(model, name, op, value):
+        # print("convertAttributeOp", type(model))
+        # print("convertAttributeOp", model, name, op, value)
+        column = getattr(model, name)
+        assert column is not None, f"cannot map {name} to model {model.__tablename__}"
+        opMethod = getattr(column, op)
+        assert opMethod is not None, f"cannot map {op} to attribute {name} of model {model.__tablename__}"
+        return opMethod(value)
+
+    def convertRelationship(model, attributeName, where, opName, opValue):
+        # print("convertRelationship", model, attributeName, where, opName, opValue)
+        # GroupTypeModel.groups.property.entity.class_
+        targetDBModel = getattr(model, attributeName).property.entity.class_
+        # print("target", type(targetDBModel), targetDBModel)
+
+        nonlocal baseStatement
+        if targetDBModel.__tablename__ not in usedTables:
+            baseStatement = baseStatement.join(targetDBModel)
+            usedTables.append(targetDBModel.__tablename__)
+        #return convertAttribute(targetDBModel, attributeName, opValue)
+        return convertAny(targetDBModel, opValue)
+        
+        # stmt = select(GroupTypeModel).join(GroupTypeModel.groups.property.target).filter(GroupTypeModel.groups.property.target.c.name == "22-5KB")
+        # type(GroupTypeModel.groups.property) sqlalchemy.orm.relationships.RelationshipProperty
+
+    def convertAttribute(model, attributeName, where):
+        woNone = limitDict(where)
+        #print("convertAttribute", model, attributeName, woNone)
+        keys = list(woNone.keys())
+        assert len(keys) == 1, "convertAttribute: only one attribute in where expected"
+        opName = keys[0]
+        opValue = woNone[opName]
+
+        ops = {
+            "_eq": "__eq__",
+            "_lt": "__lt__",
+            "_le": "__le__",
+            "_gt": "__gt__",
+            "_ge": "__ge__",
+            "_in": "in_",
+            "_like": "like",
+            "_ilike": "ilike",
+            "_startswith": "startswith",
+            "_endswith": "endswith",
+        }
+
+        opName = ops.get(opName, None)
+        # if opName is None:
+        #     print("op", attributeName, opName, opValue)
+        #     result = convertRelationship(model, attributeName, woNone, opName, opValue)
+        # else:
+        result = convertAttributeOp(model, attributeName, opName, opValue)
+        return result
+        
+    def convertAny(model, where):
+        
+        woNone = limitDict(where)
+        # print("convertAny", woNone, flush=True)
+        keys = list(woNone.keys())
+        # print(keys, flush=True)
+        # print(woNone, flush=True)
+        assert len(keys) == 1, "convertAny: only one attribute in where expected"
+        key = keys[0]
+        value = woNone[key]
+        
+        convertors = {
+            "_and": convertAnd,
+            "_or": convertOr
+        }
+        #print("calling", key, "convertor", value, flush=True)
+        #print("value is", value, flush=True)
+        convertor = convertors.get(key, convertAttribute)
+        convertor = convertors.get(key, None)
+        modelAttribute = getattr(model, key, None)
+        if (convertor is None) and (modelAttribute is None):
+            assert False, f"cannot recognize {model}.{key} on {woNone}"
+        if (modelAttribute is not None):
+            property = getattr(modelAttribute, "property", None)
+            target = getattr(property, "target", None)
+            # print("modelAttribute", modelAttribute, target)
+            if target is None:
+                result = convertAttribute(model, key, value)
+            else:
+                result = convertRelationship(model, key, where, key, value)
+        else:
+            result = convertor(model, key, value)
+        return result
+    
+    filterStatement = convertAny(model, limitDict(where))
+    result = baseStatement.filter(filterStatement)
+    return result
 
 def createIdLoader(asyncSessionMaker, dbModel) :
 

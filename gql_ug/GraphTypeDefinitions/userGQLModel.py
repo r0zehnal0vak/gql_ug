@@ -31,6 +31,9 @@ from ..GraphPermissions import UserGDPRPermission
 
 @strawberry.federation.type(keys=["id"], description="""Entity representing a user""")
 class UserGQLModel(BaseGQLModel):
+    @classmethod
+    def getLoader(cls, info):
+        return getLoader(info).users
 
     id = resolve_id
     name = resolve_name
