@@ -13,89 +13,13 @@ from tests.shared import (
     createContext,
 )
 
-
-def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
-    @pytest.mark.asyncio
-    async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
-
-        data = get_demodata()
-        datarow = data[tableName][0]
-
-        query = "query($id: ID!){" f"{queryEndpoint}(id: $id)" "{ id, name }}"
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": datarow["id"]}
-        resp = await schema.execute(
-            query, context_value=context_value, variable_values=variable_values
-        )  # , variable_values={"title": "The Great Gatsby"})
-
-        respdata = resp.data[queryEndpoint]
-
-        assert resp.errors is None
-
-        for att in attributeNames:
-            assert respdata[att] == datarow[att]
-
-    return result_test
-
-
-def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
-    @pytest.mark.asyncio
-    async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
-
-        data = get_demodata()
-
-        query = "query{" f"{queryEndpoint}" "{ id, name }}"
-
-        context_value = await createContext(async_session_maker)
-        resp = await schema.execute(query, context_value=context_value)
-
-        respdata = resp.data[queryEndpoint]
-        datarows = data[tableName]
-
-        assert resp.errors is None
-
-        for rowa, rowb in zip(respdata, datarows):
-            for att in attributeNames:
-                assert rowa[att] == rowb[att]
-
-    return result_test
-
-def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]):
-    @pytest.mark.asyncio
-    async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
-
-        data = get_demodata()
-
-        data = get_demodata()
-        table = data[tableName]
-        for row in table:
-            rowid = row['id']
-
-            query = (
-                'query { _entities(representations: [{ __typename: '+ f'"{gqltype}", id: "{rowid}"' + 
-                ' }])' +
-                '{' +
-                f'...on {gqltype}' + 
-                '{ id }'+
-                '}' + 
-                '}')
-
-            context_value = await createContext(async_session_maker)
-            resp = await schema.execute(query, context_value=context_value)
-            data = resp.data
-            print(data, flush=True)
-            data = data['_entities'][0]
-
-            assert data['id'] == rowid
-
-    return result_test
+from .gqlshared import (
+    createByIdTest, 
+    createPageTest, 
+    createResolveReferenceTest,
+    createUpdateQuery,
+    CreateSchemaFunction
+)
 
 test_query_user_by_id = createByIdTest(tableName="users", queryEndpoint="userById")
 test_query_group_by_id = createByIdTest(tableName="groups", queryEndpoint="groupById")
@@ -119,9 +43,9 @@ test_query_roletype_page = createPageTest(
 test_reference_user = createResolveReferenceTest(tableName="users", gqltype="UserGQLModel")
 test_reference_group = createResolveReferenceTest(tableName="groups", gqltype="GroupGQLModel")
 test_reference_group_type = createResolveReferenceTest(tableName="grouptypes", gqltype="GroupTypeGQLModel")
-test_reference_role = createResolveReferenceTest(tableName="roles", gqltype="RoleGQLModel")
+test_reference_role = createResolveReferenceTest(tableName="roles", gqltype="RoleGQLModel", attributeNames=['id'])
 test_reference_role_type = createResolveReferenceTest(tableName="roletypes", gqltype="RoleTypeGQLModel")
-test_reference_membership = createResolveReferenceTest(tableName="memberships", gqltype="MembershipGQLModel")
+test_reference_membership = createResolveReferenceTest(tableName="memberships", gqltype="MembershipGQLModel", attributeNames=['id'])
 
 
 @pytest.mark.asyncio
@@ -178,182 +102,16 @@ async def test_large_query():
         }
         }"""
 
-    context_value = await createContext(async_session_maker)
-    resp = await schema.execute(query, context_value=context_value)
 
-    respdata = resp.data["groupById"]
+    schemaExecutor = CreateSchemaFunction()
+    variable_values = {}
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
+    respdata = resp["data"]["groupById"]
+
+    assert resp["errors"] is None
     assert respdata["id"] == "2d9dcd22-a4a2-11ed-b9df-0242ac120003"
 
-@pytest.mark.asyncio
-async def test_query_user():
-    async_session_maker = await prepare_in_memory_sqllite()
-    await prepare_demodata(async_session_maker)
-
-    data = get_demodata()
-    table = data['users']
-
-    for row in table:
-        
-
-        query = """query($id: ID!) {
-            userById(id: $id) {
-                id
-                name
-                surname
-                email
-
-                lastchange
-                roles {
-                    id
-                }
-            }
-            }"""
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": row["id"]}
-        resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-
-        respdata = resp.data["userById"]
-
-        assert resp.errors is None
-        assert respdata["id"] == row["id"]
-
-@pytest.mark.asyncio
-async def test_query_group():
-    async_session_maker = await prepare_in_memory_sqllite()
-    await prepare_demodata(async_session_maker)
-
-    data = get_demodata()
-    table = data['groups']
-
-    for row in table:
-        
-
-        query = """query($id: ID!) {
-            groupById(id: $id) {
-                id
-                name
-
-                lastchange
-                valid
-
-                grouptype { id }
-                mastergroup { id }
-            }
-            }"""
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": row["id"]}
-        resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-
-        respdata = resp.data["groupById"]
-
-        assert resp.errors is None
-        assert respdata["id"] == row["id"]
-
-@pytest.mark.asyncio
-async def test_query_group_roles():
-    async_session_maker = await prepare_in_memory_sqllite()
-    await prepare_demodata(async_session_maker)
-
-    data = get_demodata()
-    table = data['groups']
-
-    for row in table:
-        
-
-        query = """query($id: ID!) {
-            groupById(id: $id) {
-                id
-                roles { 
-                    id
-                    startdate
-                    enddate
-                    valid
-                    group { id }
-                    user { id }
-                    roletype {
-                        id
-                        name
-                    }
-                }
-            }
-            }"""
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": row["id"]}
-        resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-
-        respdata = resp.data["groupById"]
-
-        assert resp.errors is None
-        assert respdata["id"] == row["id"]
-
-@pytest.mark.asyncio
-async def test_query_role_type():
-    async_session_maker = await prepare_in_memory_sqllite()
-    await prepare_demodata(async_session_maker)
-
-    data = get_demodata()
-    table = data['roletypes']
-
-    for row in table:
-        query = """query($id: ID!) {
-            roleTypeById(id: $id) {
-                id
-                name
-                nameEn
-                roles { 
-                    id
-                    startdate
-                    enddate
-                    valid
-                }
-            }
-            }"""
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": row["id"]}
-        resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-        print(resp, flush=True)
-
-        assert resp.errors is None
-
-        respdata = resp.data["roleTypeById"]
-        assert respdata["id"] == row["id"]
-        assert respdata["name"] == row["name"]
-
-@pytest.mark.asyncio
-async def test_query_group_type():
-    async_session_maker = await prepare_in_memory_sqllite()
-    await prepare_demodata(async_session_maker)
-
-    data = get_demodata()
-    table = data['grouptypes']
-
-    for row in table:
-        query = """query($id: ID!) {
-            groupTypeById(id: $id) {
-                id
-                name
-                nameEn
-                groups { 
-                    id
-                }
-            }
-            }"""
-
-        context_value = await createContext(async_session_maker)
-        variable_values = {"id": row["id"]}
-        resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-
-        respdata = resp.data["groupTypeById"]
-
-        assert resp.errors is None
-        assert respdata["id"] == row["id"]
-        assert respdata["name"] == row["name"]
 
 
 # @pytest.mark.asyncio
@@ -376,13 +134,13 @@ async def test_query_group_type():
 #         }
 #         }"""
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"]}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     respdata = resp.data["groupById"]
+#     respdata = resp["data"]["groupById"]
 
-#     assert resp.errors is None
+#     assert resp["errors"] is None
 #     assert respdata["id"] == row["id"]
 #     memberids = list(map(lambda item: item['user']['id'], respdata["memberships"]))
 
@@ -404,11 +162,11 @@ async def test_query_group_type():
 #             }
 #             }"""
 
-#         context_value = await createContext(async_session_maker)
+#         context_value = createContext(async_session_maker)
 #         variable_values = {"id": row["id"], "userId": row2["id"]}
 #         resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#         assert resp.errors is None
+#         assert resp["errors"] is None
 
 
 #     query = """query($id: ID!) {
@@ -420,11 +178,11 @@ async def test_query_group_type():
 #         }
 #         }"""
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"]}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-#     assert resp.errors is None
-#     respdata = resp.data["groupById"]
+#     assert resp["errors"] is None
+#     respdata = resp["data"]["groupById"]
 #     assert respdata["id"] == row["id"]
 
 #     memberids = list(map(lambda item: item['user']['id'], respdata["memberships"]))
@@ -453,12 +211,12 @@ import datetime
 #         }
 #         }"""
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"]}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     assert resp.errors is None
-#     respdata = resp.data["groupById"]
+#     assert resp["errors"] is None
+#     respdata = resp["data"]["groupById"]
 #     lastchange = respdata["lastchange"]
 #     print(lastchange)
 #     lastchange = datetime.datetime.fromisoformat(respdata["lastchange"])
@@ -478,12 +236,12 @@ import datetime
 #     # musi selhat, je spatne razitko
 #     group = {"name": "newname", "lastchange": f"{datetime.datetime.now().isoformat()}"}
 #     print(1, group, flush=True)
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"], "group": group}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     assert resp.errors is None
-#     respdata = resp.data["groupById"]
+#     assert resp["errors"] is None
+#     respdata = resp["data"]["groupById"]
 #     assert respdata["id"] == row["id"]
 #     assert respdata["editor"]["id"] == row["id"]
 #     respdata = respdata["editor"]
@@ -492,12 +250,12 @@ import datetime
 #     # musi projit, je spravne razitko
 #     group = {"name": "newname", "lastchange": f"{lastchange.isoformat()}"}
 #     print(2, group, flush=True)
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"], "group": group}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     assert resp.errors is None
-#     respdata = resp.data["groupById"]
+#     assert resp["errors"] is None
+#     respdata = resp["data"]["groupById"]
 #     assert respdata["id"] == row["id"]
 #     assert respdata["editor"]["id"] == row["id"]
 #     respdata = respdata["editor"]
@@ -530,13 +288,13 @@ import datetime
 
 #     newuser = {"name": "new", "surname": "user", "email": "new.user@somewhere.else", "valid": True}
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"], "user": newuser}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     respdata = resp.data["groupById"]
+#     respdata = resp["data"]["groupById"]
 
-#     assert resp.errors is None
+#     assert resp["errors"] is None
 #     assert respdata["id"] == row["id"]
 
 #     respuser = respdata["editor"]["createUser"]
@@ -568,13 +326,13 @@ import datetime
 
 #     roletype = data['roletypes'][0]
 #     user = data['users'][0]
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["id"], "userId": user['id'], "roletypeId": roletype['id']}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     respdata = resp.data["groupById"]
+#     respdata = resp["data"]["groupById"]
 
-#     assert resp.errors is None
+#     assert resp["errors"] is None
 #     assert respdata["id"] == row["id"]
 
 #     resprole = respdata["editor"]["addRole"]
@@ -601,13 +359,13 @@ import datetime
 #         }
 #         }"""
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"id": row["group_id"], "roleId": row['id']}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     respdata = resp.data["groupById"]
+#     respdata = resp["data"]["groupById"]
 
-#     assert resp.errors is None
+#     assert resp["errors"] is None
 #     assert respdata["id"] == row["group_id"]
 
 #     resprole = respdata["editor"]["invalidateRole"]
@@ -627,13 +385,13 @@ import datetime
 #         }
 #         }"""
 
-#     context_value = await createContext(async_session_maker)
+#     context_value = createContext(async_session_maker)
 #     variable_values = {"name": name}
 #     resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-#     respdata = resp.data["randomUniversity"]
+#     respdata = resp["data"]["randomUniversity"]
 
-#     assert resp.errors is None
+#     assert resp["errors"] is None
 #     assert respdata["name"] == name
 
 @pytest.mark.asyncio
@@ -650,15 +408,16 @@ async def test_query_group_3L():
         }
         }"""
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"letters": letters}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
 
-    respdata = resp.data["groupByLetters"]
+    respdata = resp["data"]["groupByLetters"]
     for group in respdata:
         assert letters in group['name']
 
-    assert resp.errors is None
+    assert resp["errors"] is None
 
 @pytest.mark.asyncio
 async def test_query_user_3L():
@@ -675,15 +434,17 @@ async def test_query_user_3L():
         }
         }"""
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"letters": letters}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
 
-    respdata = resp.data["userByLetters"]
+    variable_values = {"letters": letters}
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
+
+    respdata = resp["data"]["userByLetters"]
     for user in respdata:
         assert letters in user['name']
 
-    assert resp.errors is None
+    assert resp["errors"] is None
 
 @pytest.mark.asyncio
 async def test_user_update():
@@ -708,10 +469,12 @@ async def test_user_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
+
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    lastchange = resp.data['userById']['lastchange']
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
+    lastchange = resp["data"]['userById']['lastchange']
     newname = "Michael"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -731,24 +494,28 @@ async def test_user_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
+
     variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
     
     print(resp, flush=True)
-    #respdata = resp.data['_entities']
+    #respdata = resp["data"]['_entities']
     #print(respdata, flush=True)
     #assert respdata[0]['id'] == id
-    assert resp.errors is None
-    data = resp.data['userUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['userUpdate']
     assert data["user"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['userUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    
+    assert resp["errors"] is None
+    data = resp["data"]['userUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -775,14 +542,16 @@ async def test_user_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
+
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['userInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['userInsert']
     assert data["user"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -797,13 +566,12 @@ async def test_user_insert():
                 }
             }
         '''
+    variable_values = {"id": id}   
+    resp = await schemaExecutor(query, variable_values)
+    
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-
-    assert resp.errors is None
-    data = resp.data['userById']
+    assert resp["errors"] is None
+    data = resp["data"]['userById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -831,10 +599,11 @@ async def test_group_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    lastchange = resp.data['groupById']['lastchange']
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
+    lastchange = resp["data"]['groupById']['lastchange']
     newname = "Group X"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -853,24 +622,25 @@ async def test_group_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}    
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
-    #respdata = resp.data['_entities']
+    #respdata = resp["data"]['_entities']
     #print(respdata, flush=True)
     #assert respdata[0]['id'] == id
-    assert resp.errors is None
-    data = resp.data['groupUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['groupUpdate']
     assert data["group"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['groupUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    
+    assert resp["errors"] is None
+    data = resp["data"]['groupUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -897,14 +667,14 @@ async def test_group_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['groupInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['groupInsert']
     assert data["group"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -920,12 +690,12 @@ async def test_group_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['groupById']
+    assert resp["errors"] is None
+    data = resp["data"]['groupById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -954,10 +724,10 @@ async def test_role_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    lastchange = resp.data['roleTypeById']['lastchange']
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    lastchange = resp["data"]['roleTypeById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -976,9 +746,9 @@ async def test_role_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
@@ -986,16 +756,17 @@ async def test_role_type_update():
 
 
 
-    assert resp.errors is None
-    data = resp.data['roleTypeUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeUpdate']
     assert data["roleType"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['roleTypeUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1022,14 +793,14 @@ async def test_role_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleTypeInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeInsert']
     assert data["roleType"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1045,12 +816,12 @@ async def test_role_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['roleTypeById']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1078,16 +849,15 @@ async def test_role_category_update():
                 }
             }
         '''
-
     
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    lastchange = resp.data['roleCategoryById']['lastchange']
+    lastchange = resp["data"]['roleCategoryById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -1106,23 +876,23 @@ async def test_role_category_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}   
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryUpdate']
     assert data["roleCategory"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['roleCategoryUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1149,14 +919,14 @@ async def test_role_category_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryInsert']
     assert data["roleCategory"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1172,12 +942,12 @@ async def test_role_category_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryById']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1206,15 +976,14 @@ async def test_group_type_update():
             }
         '''
 
-    
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    lastchange = resp.data['groupTypeById']['lastchange']
+    lastchange = resp["data"]['groupTypeById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -1233,23 +1002,21 @@ async def test_group_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    
+    variable_values = {"id": id, "lastchange": lastchange, "newname": newname}   
+    resp = await schemaExecutor(query, variable_values)
     print(resp, flush=True)
 
-
-    assert resp.errors is None
-    data = resp.data['groupTypeUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeUpdate']
     assert data["groupType"]["name"] == newname
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['groupTypeUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1276,14 +1043,14 @@ async def test_group_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['groupTypeInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeInsert']
     assert data["groupType"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1299,12 +1066,11 @@ async def test_group_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id}    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['groupTypeById']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1336,14 +1102,15 @@ async def test_membership_update():
         '''
 
     
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": group_id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    memberships = resp.data['groupById']['memberships']
+    memberships = resp["data"]['groupById']['memberships']
     lastchange = memberships[0]['lastchange']
     query = '''
             mutation($id: ID!, $lastchange: DateTime!) {
@@ -1362,23 +1129,22 @@ async def test_membership_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id, "lastchange": lastchange}   
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-
-    assert resp.errors is None
-    data = resp.data['membershipUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['membershipUpdate']
     assert data["membership"]["valid"] == False
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['membershipUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['membershipUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1419,14 +1185,14 @@ async def test_membership_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"group_id": group_id, "user_id": user_id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['membershipInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['membershipInsert']
     assert data["membership"]["group"]["id"] == group_id
     assert data["membership"]["user"]["id"] == user_id
     assert data["msg"] == "ok"
@@ -1458,15 +1224,14 @@ async def test_role_update():
             }
         '''
 
-    
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": group_id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    roles = resp.data['groupById']['roles']
+    roles = resp["data"]['groupById']['roles']
     role = roles[0]
     lastchange = role['lastchange']
     assert id == role['id']
@@ -1488,24 +1253,24 @@ async def test_role_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id, "lastchange": lastchange}   
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['roleUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleUpdate']
     assert data["role"]["valid"] == False
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     print(resp, flush=True)
     # assert False
-    assert resp.errors is None
-    data = resp.data['roleUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1548,14 +1313,15 @@ async def test_role_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
+
     variable_values = {"group_id": group_id, "user_id": user_id, "roletype_id": roletype_id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleInsert']
     assert data["role"]["group"]["id"] == group_id
     assert data["role"]["user"]["id"] == user_id
     assert data["role"]["roletype"]["id"] == roletype_id
@@ -1586,10 +1352,10 @@ async def test_role_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    lastchange = resp.data['roleTypeById']['lastchange']
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    lastchange = resp["data"]['roleTypeById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -1608,26 +1374,21 @@ async def test_role_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    
+    resp = await schemaExecutor(query, variable_values)    
     print(resp, flush=True)
 
-
-
-
-
-    assert resp.errors is None
-    data = resp.data['roleTypeUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeUpdate']
     assert data["roleType"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['roleTypeUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1654,14 +1415,14 @@ async def test_role_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleTypeInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeInsert']
     assert data["roleType"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1677,12 +1438,12 @@ async def test_role_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['roleTypeById']
+    assert resp["errors"] is None
+    data = resp["data"]['roleTypeById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1711,15 +1472,14 @@ async def test_role_category_update():
             }
         '''
 
-    
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    lastchange = resp.data['roleCategoryById']['lastchange']
+    lastchange = resp["data"]['roleCategoryById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -1738,23 +1498,24 @@ async def test_role_category_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryUpdate']
     assert data["roleCategory"]["name"] == newname
     assert data["msg"] == "ok"
 
     # zmeneno lastchange, nema projit uspesne
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['roleCategoryUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1781,14 +1542,14 @@ async def test_role_category_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryInsert']
     assert data["roleCategory"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1804,12 +1565,11 @@ async def test_role_category_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id}   
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['roleCategoryById']
+    assert resp["errors"] is None
+    data = resp["data"]['roleCategoryById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1838,15 +1598,13 @@ async def test_group_type_update():
             }
         '''
 
-    
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    lastchange = resp.data['groupTypeById']['lastchange']
+    lastchange = resp["data"]['groupTypeById']['lastchange']
     newname = "Group Support"
     query = '''
             mutation($id: ID!, $lastchange: DateTime!, $newname: String!) {
@@ -1865,23 +1623,24 @@ async def test_group_type_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "lastchange": lastchange, "newname": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['groupTypeUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeUpdate']
     assert data["groupType"]["name"] == newname
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['groupTypeUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -1908,14 +1667,15 @@ async def test_group_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"name": newname}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['groupTypeInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeInsert']
     assert data["groupType"]["name"] == newname
     assert data["msg"] == "ok"
 
@@ -1931,12 +1691,12 @@ async def test_group_type_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
 
-    assert resp.errors is None
-    data = resp.data['groupTypeById']
+    assert resp["errors"] is None
+    data = resp["data"]['groupTypeById']
     assert data["name"] == newname
     assert data["id"] == id
     
@@ -1967,15 +1727,14 @@ async def test_membership_update():
             }
         '''
 
-    
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": group_id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    memberships = resp.data['groupById']['memberships']
+    memberships = resp["data"]['groupById']['memberships']
     lastchange = memberships[0]['lastchange']
     query = '''
             mutation($id: ID!, $lastchange: DateTime!) {
@@ -1994,23 +1753,24 @@ async def test_membership_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['membershipUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['membershipUpdate']
     assert data["membership"]["valid"] == False
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
     
-    assert resp.errors is None
-    data = resp.data['membershipUpdate']
+    resp = await schemaExecutor(query, variable_values)
+    
+    assert resp["errors"] is None
+    data = resp["data"]['membershipUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -2051,14 +1811,14 @@ async def test_membership_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"group_id": group_id, "user_id": user_id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['membershipInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['membershipInsert']
     assert data["membership"]["group"]["id"] == group_id
     assert data["membership"]["user"]["id"] == user_id
     assert data["msg"] == "ok"
@@ -2091,14 +1851,14 @@ async def test_role_update():
         '''
 
     
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": group_id}
     print(query, variable_values, flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    assert resp.data is not None
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    assert resp["data"] is not None
 
-    roles = resp.data['groupById']['roles']
+    roles = resp["data"]['groupById']['roles']
     role = roles[0]
     lastchange = role['lastchange']
     assert id == role['id']
@@ -2120,24 +1880,24 @@ async def test_role_update():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
-    variable_values = {"id": id, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    variable_values = {"id": id, "lastchange": lastchange}   
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
 
-    assert resp.errors is None
-    data = resp.data['roleUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleUpdate']
     assert data["role"]["valid"] == False
     assert data["msg"] == "ok"
 
     print("# zmeneno lastchange, nema projit uspesne", flush=True)
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    
+    resp = await schemaExecutor(query, variable_values)
     print(resp, flush=True)
     # assert False
-    assert resp.errors is None
-    data = resp.data['roleUpdate']
+    assert resp["errors"] is None
+    data = resp["data"]['roleUpdate']
     assert data["msg"] == "fail"
 
     pass
@@ -2180,14 +1940,14 @@ async def test_role_insert():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {"group_id": group_id, "user_id": user_id, "roletype_id": roletype_id}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['roleInsert']
+    assert resp["errors"] is None
+    data = resp["data"]['roleInsert']
     assert data["role"]["group"]["id"] == group_id
     assert data["role"]["user"]["id"] == user_id
     assert data["role"]["roletype"]["id"] == roletype_id
@@ -2224,16 +1984,16 @@ async def test_user_mutation():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {
         "name": name
     }
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['operation']
+    assert resp["errors"] is None
+    data = resp["data"]['operation']
     assert data["msg"] == "ok"
     data = data["entity"]
     assert data["name"] == name
@@ -2266,20 +2026,21 @@ async def test_user_mutation():
             }
         '''
     newName = "newName"
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "name": newName, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
+    
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
 
-    data = resp.data['operation']
+    data = resp["data"]['operation']
     assert data['msg'] == "ok"
     data = data["entity"]
     assert data["name"] == newName
 
     # lastchange je jine, musi fail
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    data = resp.data['operation']
+    
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    data = resp["data"]['operation']
     assert data['msg'] == "fail"
 
     pass
@@ -2318,16 +2079,16 @@ async def test_group_mutation():
             }
         '''
 
-    context_value = await createContext(async_session_maker)
     variable_values = {
         "name": name
     }
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
+    schemaExecutor = CreateSchemaFunction()
+    resp = await schemaExecutor(query, variable_values)
     
     print(resp, flush=True)
 
-    assert resp.errors is None
-    data = resp.data['operation']
+    assert resp["errors"] is None
+    data = resp["data"]['operation']
     assert data["msg"] == "ok"
     data = data["entity"]
     assert data["name"] == name
@@ -2360,12 +2121,12 @@ async def test_group_mutation():
             }
         '''
     newName = "newName"
-    context_value = await createContext(async_session_maker)
     variable_values = {"id": id, "name": newName, "lastchange": lastchange}
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
+    
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
 
-    data = resp.data['operation']
+    data = resp["data"]['operation']
     assert data['msg'] == "ok"
     data = data["entity"]
     assert data["name"] == newName
@@ -2374,9 +2135,10 @@ async def test_group_mutation():
     print(lastchange, flush=True)
     variable_values = {"id": id, "name": newName, "lastchange": lastchange}
     # #lastchange je jine, musi fail
-    resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-    assert resp.errors is None
-    data = resp.data['operation']
+    
+    resp = await schemaExecutor(query, variable_values)
+    assert resp["errors"] is None
+    data = resp["data"]['operation']
     #assert data['msg'] == "fail"
     #assert False
 

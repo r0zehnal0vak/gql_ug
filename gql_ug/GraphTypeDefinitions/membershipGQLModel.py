@@ -3,7 +3,7 @@ import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 
 from ._GraphResolvers import (
     resolve_id,
@@ -65,6 +65,18 @@ class MembershipGQLModel(BaseGQLModel):
 # Special fields for query
 #
 #####################################################################
+from .utils import createInputs
+from dataclasses import dataclass
+GroupInputWhereFilter = Annotated["GroupInputWhereFilter", strawberry.lazy(".groupGQLModel")]
+UserInputWhereFilter = Annotated["UserInputWhereFilter", strawberry.lazy(".userGQLModel")]
+@createInputs
+@dataclass
+class MembershipInputWhereFilter:
+    valid: bool
+    # from .userGQLModel import UserInputWhereFilter
+    # from .groupGQLModel import GroupInputWhereFilter
+    group: GroupInputWhereFilter
+    user: UserInputWhereFilter
 
 #####################################################################
 #
@@ -75,7 +87,7 @@ import datetime
 
 @strawberry.input
 class MembershipUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime   
     valid: Optional[bool] = None
     startdate: Optional[datetime.datetime] = None
@@ -83,8 +95,8 @@ class MembershipUpdateGQLModel:
 
 @strawberry.input
 class MembershipInsertGQLModel:
-    user_id: uuid.UUID
-    group_id: uuid.UUID
+    user_id: IDType
+    group_id: IDType
     id: Optional[uuid.UUID] = None
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = None
@@ -92,7 +104,7 @@ class MembershipInsertGQLModel:
 
 @strawberry.type
 class MembershipResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of membership operation""")

@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -78,7 +78,7 @@ class UserGQLModel(BaseGQLModel):
         description="""List of groups given type, where the user is member"""
     )
     async def member_of(
-        self, grouptype_id: uuid.UUID, info: strawberry.types.Info
+        self, grouptype_id: IDType, info: strawberry.types.Info
     ) -> List["GroupGQLModel"]:
         loader = getLoader(info).memberships
         rows = await loader.filter_by(user_id=self.id)# , grouptype_id=grouptype_id)
@@ -93,17 +93,33 @@ class UserGQLModel(BaseGQLModel):
 #
 #####################################################################
 
+from .utils import createInputs
+from dataclasses import dataclass
+#MembershipInputWhereFilter = Annotated["MembershipInputWhereFilter", strawberry.lazy(".membershipGQLModel")]
+@createInputs
+@dataclass
+class UserInputWhereFilter:
+    name: str
+    surname: str
+    email: str
+    fullname: str
+    valid: bool
+    from .membershipGQLModel import MembershipInputWhereFilter
+    memberships: MembershipInputWhereFilter
+
 @strawberry.field(description="""Returns a list of users (paged)""")
 async def user_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: Optional[UserInputWhereFilter] = None
 ) -> List[UserGQLModel]:
+    wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).users
-    result = await loader.page(skip, limit)
+    result = await loader.page(skip, limit, where=wheredict)
     return result
 
 @strawberry.field(description="""Finds an user by their id""")
 async def user_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Union[UserGQLModel, None]:
     result = await UserGQLModel.resolve_reference(info=info, id=id)
     return result
@@ -136,8 +152,8 @@ from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
 async def users_by_group_and_role_type(
     self,
     info: strawberry.types.Info,
-    group_id: uuid.UUID,
-    role_type_id: uuid.UUID,
+    group_id: IDType,
+    role_type_id: IDType,
 ) -> List[UserGQLModel]:
     # result = await resolveUserByRoleTypeAndGroup(session,  group_id, role_type_id)
     loader = getLoader(info).users
@@ -154,7 +170,7 @@ import datetime
 
 @strawberry.input
 class UserUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime  # razitko
     name: Optional[str] = None
     surname: Optional[str] = None
@@ -171,7 +187,7 @@ class UserInsertGQLModel:
 
 @strawberry.type
 class UserResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of user operation""")

@@ -3,7 +3,7 @@ import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 
 from ._GraphResolvers import (
     resolve_id,
@@ -50,17 +50,30 @@ class GroupTypeGQLModel(BaseGQLModel):
 # Special fields for query
 #
 #####################################################################
+from .utils import createInputs
+from dataclasses import dataclass
+# MembershipInputWhereFilter = Annotated["MembershipInputWhereFilter", strawberry.lazy(".membershipGQLModel")]
+@createInputs
+@dataclass
+class GroupTypeInputWhereFilter:
+    name: str
+    valid: bool
+    # from .membershipGQLModel import MembershipInputWhereFilter
+    # memberships: MembershipInputWhereFilter
+
 @strawberry.field(description="""Returns a list of groups types (paged)""")
 async def group_type_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 20
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 20,
+    where: Optional[GroupTypeInputWhereFilter] = None
 ) -> List[GroupTypeGQLModel]:
+    wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).grouptypes
-    result = await loader.page(skip, limit)
+    result = await loader.page(skip, limit, where=wheredict)
     return result
 
 @strawberry.field(description="""Finds a group type by its id""")
 async def group_type_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Union[GroupTypeGQLModel, None]:
     # result = await resolveGroupTypeById(session,  id)
     result = await GroupTypeGQLModel.resolve_reference(info, id)
@@ -75,7 +88,7 @@ import datetime
 
 @strawberry.input
 class GroupTypeUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
@@ -88,7 +101,7 @@ class GroupTypeInsertGQLModel:
 
 @strawberry.type
 class GroupTypeResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of grouptype operation""")

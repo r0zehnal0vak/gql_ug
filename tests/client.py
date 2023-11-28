@@ -1,11 +1,11 @@
 import logging
 import json
-
+from .shared import changeGQLQuery
 def createGQLClient():
 
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    import DBDefinitions
+    from ._imports import DBDefinitions
 
     def ComposeCString():
         return "sqlite+aiosqlite:///:memory:"
@@ -22,6 +22,7 @@ def CreateClientFunction():
     client = createGQLClient()
 
     async def result(query, variables={}):
+        query = changeGQLQuery(query)
         json = {
             "query": query,
             "variables": variables

@@ -3,7 +3,7 @@ import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -47,20 +47,32 @@ class RoleTypeGQLModel(BaseGQLModel):
 # Special fields for query
 #
 #####################################################################
+from .utils import createInputs
+from dataclasses import dataclass
+
+@createInputs
+@dataclass
+class RoleTypeInputWhereFilter:
+    name: str
+    from .roleGQLModel import RoleInputWhereFilter
+    roles: RoleInputWhereFilter
+
 @strawberry.field(description="""Finds a role type by its id""")
 async def role_type_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Union[RoleTypeGQLModel, None]:
     result = await RoleTypeGQLModel.resolve_reference(info, id)
     return result
 
 @strawberry.field(description="""Finds all roles types paged""")
 async def role_type_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: Optional[RoleTypeInputWhereFilter] = None
 ) -> List[RoleTypeGQLModel]:
+    wheredict = None if where is None else strawberry.asdict(where)
     # result = await resolveRoleTypeAll(session,  skip, limit)
     loader = getLoader(info).roletypes
-    result = await loader.page(skip, limit)
+    result = await loader.page(skip, limit, where=wheredict)
     return result
     
 #####################################################################
@@ -71,7 +83,7 @@ async def role_type_page(
 import datetime
 @strawberry.input
 class RoleTypeUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
@@ -84,7 +96,7 @@ class RoleTypeInsertGQLModel:
 
 @strawberry.type
 class RoleTypeResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of role type operation""")

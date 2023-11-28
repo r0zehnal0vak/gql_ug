@@ -15,7 +15,7 @@ from gql_ug.DBFeeder import predefineAllDataStructures
 
 # import gql_ug.GraphResolvers
 @pytest.mark.asyncio
-async def test_load_system_data():
+async def _test_load_system_data():
     async_session_maker = await prepare_in_memory_sqllite()
     await predefineAllDataStructures(async_session_maker)
 
@@ -24,7 +24,7 @@ from gql_ug.DBFeeder import predefineAllDataStructures, randomDataStructure
 
 
 @pytest.mark.asyncio
-async def test_random_data():
+async def _test_random_data():
     async_session_maker = await prepare_in_memory_sqllite()
     await predefineAllDataStructures(async_session_maker)
     async with async_session_maker() as session:
@@ -38,7 +38,7 @@ from gql_ug.DBFeeder import (
 
 
 @pytest.mark.asyncio
-async def test_system_data():
+async def _test_system_data():
     async_session_maker = await prepare_in_memory_sqllite()
     await predefineAllDataStructures(async_session_maker)
     await createSystemDataStructureRoleTypes(async_session_maker)

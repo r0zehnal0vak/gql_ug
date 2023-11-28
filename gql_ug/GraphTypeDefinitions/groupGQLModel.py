@@ -2,7 +2,7 @@ import datetime
 import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 
 from ._GraphResolvers import (
     resolve_id,
@@ -47,7 +47,8 @@ class GroupGQLModel(BaseGQLModel):
     async def grouptype(
         self, info: strawberry.types.Info
     ) -> Union["GroupTypeGQLModel", None]:
-        result = await gql_ug.GraphTypeDefinitions.GroupTypeGQLModel.resolve_reference(info, id=self.grouptype_id)
+        from .groupTypeGQLModel import GroupTypeGQLModel
+        result = await GroupTypeGQLModel.resolve_reference(info, id=self.grouptype_id)
         return result
 
     @strawberry.field(description="""Directly commanded groups""")
@@ -93,18 +94,30 @@ class GroupGQLModel(BaseGQLModel):
 # Special fields for query
 #
 #####################################################################
+from .utils import createInputs
+from dataclasses import dataclass
+# MembershipInputWhereFilter = Annotated["MembershipInputWhereFilter", strawberry.lazy(".membershipGQLModel")]
+@createInputs
+@dataclass
+class GroupInputWhereFilter:
+    name: str
+    valid: bool
+    from .membershipGQLModel import MembershipInputWhereFilter
+    memberships: MembershipInputWhereFilter
+
 @strawberry.field(description="""Returns a list of groups (paged)""")
 async def group_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: Optional[GroupInputWhereFilter] = None
 ) -> List[GroupGQLModel]:
-    # result = await resolveGroupAll(session,  skip, limit)
+    wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).groups
-    result = await loader.page(skip, limit)
+    result = await loader.page(skip, limit, where=wheredict)
     return result
 
 @strawberry.field(description="""Finds a group by its id""")
 async def group_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Union[GroupGQLModel, None]:
     result = await GroupGQLModel.resolve_reference(info=info, id=id)
     return result
@@ -154,7 +167,7 @@ import datetime
 
 @strawberry.input
 class GroupUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime
     name: Optional[str] = None
     grouptype_id: Optional[uuid.UUID] = None
@@ -172,7 +185,7 @@ class GroupInsertGQLModel:
 
 @strawberry.type
 class GroupResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of group operation""")
@@ -218,7 +231,7 @@ async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLM
     """)
 async def group_update_master(self, 
     info: strawberry.types.Info, 
-    master_id: uuid.UUID,
+    master_id: IDType,
     group: GroupUpdateGQLModel) -> GroupResultGQLModel:
     loader = getLoader(info).groups
     

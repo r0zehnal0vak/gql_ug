@@ -19,6 +19,7 @@ from gql_ug.DBDefinitions import (
 from uoishelpers.resolvers import select, update, delete
 
 
+
 def prepareSelect(model, where: dict):   
     usedTables = [model.__tablename__]
     from sqlalchemy import select, and_, or_
@@ -121,6 +122,8 @@ def prepareSelect(model, where: dict):
         convertor = convertors.get(key, None)
         modelAttribute = getattr(model, key, None)
         if (convertor is None) and (modelAttribute is None):
+            print(dir(model))
+            print(modelAttribute)
             assert False, f"cannot recognize {model}.{key} on {woNone}"
         if (modelAttribute is not None):
             property = getattr(modelAttribute, "property", None)
@@ -280,7 +283,7 @@ dbmodels = {
     "rolecategories": RoleCategoryModel,
 }
 
-async def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
+def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
     def createLambda(loaderName, DBModel):
         return lambda self: createIdLoader(asyncSessionMaker, DBModel)
     

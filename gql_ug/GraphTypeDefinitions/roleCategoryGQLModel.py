@@ -2,7 +2,7 @@ import datetime
 import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
-from .BaseGQLModel import BaseGQLModel
+from .BaseGQLModel import BaseGQLModel, IDType
 
 from ._GraphResolvers import (
     resolve_id,
@@ -49,7 +49,7 @@ class RoleCategoryGQLModel(BaseGQLModel):
 #####################################################################
 @strawberry.field(description="""Finds a role type by its id""")
 async def role_category_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Union[RoleCategoryGQLModel, None]:
     result = await RoleCategoryGQLModel.resolve_reference(info,  id)
     return result
@@ -71,7 +71,7 @@ import datetime
 
 @strawberry.input
 class RoleCategoryUpdateGQLModel:
-    id: uuid.UUID
+    id: IDType
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
@@ -84,7 +84,7 @@ class RoleCategoryInsertGQLModel:
 
 @strawberry.type
 class RoleCategoryResultGQLModel:
-    id: uuid.UUID = None
+    id: IDType = None
     msg: str = None
 
     @strawberry.field(description="""Result of role category operation""")

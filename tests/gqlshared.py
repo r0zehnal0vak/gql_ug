@@ -7,7 +7,8 @@ import json
 import pytest
 import re
 
-from GraphTypeDefinitions import schema
+from ._imports import GraphTypeDefinitions
+schema = GraphTypeDefinitions.schema
 
 from .shared import (
     prepare_demodata,
@@ -16,7 +17,10 @@ from .shared import (
     createContext,
     CreateSchemaFunction
 )
-from .client import CreateClientFunction
+from .client import CreateClientFunction, changeGQLQuery
+
+
+
 
 def append(
         queryname="queryname",
@@ -71,7 +75,7 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         datarow = data[tableName][0]
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query($id: UUID!){" f"{queryEndpoint}(id: $id)" f"{content}" "}"
-
+        query = changeGQLQuery(query)
         variable_values = {"id": f'{datarow["id"]}'}
         
         append(queryname=f"{queryEndpoint}_{tableName}", query=query, variables=variable_values)        
@@ -110,7 +114,7 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
-
+        query = changeGQLQuery(query)
         append(queryname=f"{queryEndpoint}_{tableName}", query=query)
 
         resp = await schemaExecutor(query)
@@ -168,7 +172,8 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
                 "}"+
                 "}"
             )
-            
+            query = changeGQLQuery(query)
+
             variable_values = {"rep": [{"__typename": f"{gqltype}", "id": f"{rowid}"}]}
 
             logging.info(f"query representations {query} with {variable_values}")
@@ -188,6 +193,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
         context_value = createContext(async_session_maker)
+        query = changeGQLQuery(query)
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
 
@@ -236,6 +242,7 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
         variables["lastchange"] = lastchange
         variables["id"] = f'{variables["id"]}'
         context_value = createContext(async_session_maker)
+        query = changeGQLQuery(query)
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
 
@@ -269,7 +276,5 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
                 continue
             print("attribute check", type(key), f"[{key}] is {value} ?= {variables[key]}")
             assert value == variables[key], f"test on update failed {value} != {variables[key]}"
-
-        
-
+     
     return test_update

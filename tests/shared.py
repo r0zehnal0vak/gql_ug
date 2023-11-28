@@ -1,8 +1,15 @@
 import sqlalchemy
 import asyncio
 import pytest
+import logging
+import uuid
 
 # from ..uoishelpers.uuid import UUIDColumn
+from ._imports import (
+    DBDefinitions,
+    GraphTypeDefinitions,
+    schema
+)
 
 from gql_ug.DBDefinitions import BaseModel
 from gql_ug.DBDefinitions import RoleTypeModel, RoleModel, RoleCategoryModel
@@ -39,9 +46,9 @@ async def prepare_demodata(async_session_maker):
             GroupModel,
             GroupTypeModel,
             MembershipModel,
-            RoleModel,
+            RoleCategoryModel,
             RoleTypeModel,
-            RoleCategoryModel
+            RoleModel,
         ],
         data,
     )
@@ -50,8 +57,52 @@ async def prepare_demodata(async_session_maker):
 from gql_ug.Dataloaders import createLoaders_3, createLoaders
 
 
-async def createContext(asyncSessionMaker):
+def createContext(asyncSessionMaker):
     return {
         "asyncSessionMaker": asyncSessionMaker,
-        "all": await createLoaders(asyncSessionMaker),
+        "all": createLoaders(asyncSessionMaker),
     }
+
+
+useID = True
+def changeGQLQuery(GQLQuery):
+    if useID:
+        return GQLQuery.replace("UUID", "ID")
+    else:
+        return GQLQuery
+
+def changeVariables(variables):
+    if not useID:
+        return variables
+    result = {}
+    for key, value in variables.items():
+        if isinstance(value, uuid.UUID):
+            result[key] = f'{value}'
+        else:
+            result[key] = value
+    return result
+
+def CreateSchemaFunction():
+    async def result(query, variables={}):
+
+        async_session_maker = await prepare_in_memory_sqllite()
+        await prepare_demodata(async_session_maker)
+        context_value = createContext(async_session_maker)
+        query = changeGQLQuery(query)
+        variables = changeVariables(variables)
+        logging.debug(f"query for {query} with {variables}")
+        print(f"query for {query} with {variables}")
+        resp = await schema.execute(
+            query=query, 
+            variable_values=variables, 
+            context_value=context_value
+        )
+
+        assert resp.errors is None
+        respdata = resp.data
+        logging.debug(f"response: {respdata}")
+
+        result = {"data": respdata, "errors": resp.errors}
+        return result
+
+    return result

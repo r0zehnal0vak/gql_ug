@@ -58,10 +58,10 @@ from gql_ug.Dataloaders import createLoaders, createLoaders_3
 
 async def createContext():
     asyncSessionMaker = await RunOnceAndReturnSessionMaker()
-    loaders = await createLoaders(asyncSessionMaker)
+    loaders =  createLoaders(asyncSessionMaker)
     return {
         "asyncSessionMaker": await RunOnceAndReturnSessionMaker(),
-        "all": await createLoaders(asyncSessionMaker),
+        "all": loaders,
         #**loaders,
     }
 
@@ -101,5 +101,9 @@ async def startup_event():
     initizalizedEngine = await RunOnceAndReturnSessionMaker()
     return None
 
+
+@app.post("/")
+def hello():
+    return {"hello": "world"}
 
 print("All initialization is done")

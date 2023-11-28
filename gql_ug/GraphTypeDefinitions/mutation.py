@@ -1,4 +1,5 @@
 import strawberry
+import typing
 
 @strawberry.type
 class Mutation:
@@ -43,3 +44,13 @@ class Mutation:
 
     from .groupTypeGQLModel import group_type_update
     group_type_update = group_type_update
+
+
+    # @strawberry.mutation()
+    # async def createUniversity(self, info: strawberry.types.Info, name: typing.Optional[str] = "Uni") -> str:
+    #     asyncMaker = info.context["asyncSessionMaker"]
+    #     from gql_ug.DBFeeder import randomDataStructure
+    #     async with asyncMaker() as session:
+    #         await randomDataStructure(session, name=name)
+    #     return "ok"
+    #     pass

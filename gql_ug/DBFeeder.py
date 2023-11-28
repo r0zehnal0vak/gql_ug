@@ -780,8 +780,8 @@ async def randomDataStructure(session, name):
 
     return university["id"]
 
-
-async def createUniversity(session, id, name):
+import uuid
+async def createUniversity(session, id=uuid.uuid1(), name="University"):
     """Vytvori prazdnou univerzitu v databazi (session)"""
 
     university = {
@@ -934,8 +934,8 @@ def get_demodata():
 
 async def initDB(asyncSessionMaker):
 
-    defaultNoDemo = "False"
-    if "true" == os.environ.get("DEMO", "true"):
+    demo = os.environ.get("DEMO", None)
+    if demo in ["true", None]:
         dbModels = [
             GroupTypeModel, 
             RoleCategoryModel,

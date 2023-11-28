@@ -2,12 +2,13 @@ import strawberry
 import uuid
 import datetime
 import typing
+from .BaseGQLModel import IDType
 
 UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
 GroupGQLModel = typing.Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 
 @strawberry.field(description="""Entity primary key""")
-def resolve_id(self) -> uuid.UUID:
+def resolve_id(self) -> IDType:
     return self.id
 
 @strawberry.field(description="""Name """)
@@ -45,7 +46,7 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
 #     result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobject_id)
 #     return result
 
-resolve_result_id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+resolve_result_id: IDType = strawberry.field(description="primary key of CU operation object")
 resolve_result_msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
 For update operation fail should be also stated when bad lastchange has been entered.""")
 
@@ -105,7 +106,7 @@ def createRootResolver_by_id(scalarType: None, description="Retrieves item by it
     assert scalarType is not None
     @strawberry.field(description=description)
     async def by_id(
-        self, info: strawberry.types.Info, id: uuid.UUID
+        self, info: strawberry.types.Info, id: IDType
     ) -> typing.Optional[scalarType]:
         result = await scalarType.resolve_reference(info=info, id=id)
         return result

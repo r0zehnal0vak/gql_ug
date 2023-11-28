@@ -1527,4 +1527,4 @@ from .roleGQLModel import RoleGQLModel
 from .roleCategoryGQLModel import RoleCategoryGQLModel
 from .roleTypeGQLModel import RoleTypeGQLModel
 
-schema = strawberryA.federation.Schema(query=Query, types=(UserGQLModel,), mutation=Mutation)
+schema = strawberryA.federation.Schema(query=Query, types=(UserGQLModel, strawberryA.ID, uuid.UUID), mutation=Mutation)
