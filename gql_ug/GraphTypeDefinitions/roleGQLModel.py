@@ -32,8 +32,6 @@ class RoleGQLModel(BaseGQLModel):
         return getLoader(info).roles
 
     id = resolve_id
-    name = resolve_name
-    name_en = resolve_name_en
     changedby = resolve_changedby
     created = resolve_created
     lastchange = resolve_lastchange
