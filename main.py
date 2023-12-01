@@ -94,6 +94,11 @@ graphql_app = MyGraphQL(
 )
 
 app = FastAPI()
+
+# voyager je na stejne ceste jako gql, proto musi byt v kodu drive
+from doc import attachVoyager
+attachVoyager(app, path="/gql/doc")
+
 app.mount("/gql", graphql_app)
 
 @app.on_event("startup")
