@@ -15,8 +15,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-def getLoader(info):
-    return info.context["all"]
+from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
@@ -105,12 +104,11 @@ from gql_ug.DBDefinitions import (
 )
 from sqlalchemy import select
 
-@strawberry.field()
-async def roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
+async def resolve_roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     loaderm = getLoader(info).memberships
     rows = await loaderm.filter_by(user_id = user_id)
     groupids = [row.group_id for row in rows]
-    print("groupids", groupids)
+    # print("groupids", groupids)
     stmt = (
         select(RoleModel).
         where(RoleModel.group_id.in_(groupids))
@@ -119,25 +117,36 @@ async def roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> L
     rows = await loader.execute_select(stmt)
     return rows
 
-@strawberry.field()
-async def roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
-    gloader = getLoader(info).groups
+
+async def resolve_roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
+    grouploader = getLoader(info).groups
     groupids = []
     cid = group_id
     while cid is not None:
-        row = await gloader.load(cid)
+        row = await grouploader.load(cid)
         if row is None:
             break
         groupids.append(row.id)
         cid = row.mastergroup_id
-    print("groupids", groupids)
+    # print("groupids", groupids)
     stmt = (
         select(RoleModel).
         where(RoleModel.group_id.in_(groupids))
     )
-    loader = getLoader(info).roles
-    rows = await loader.execute_select(stmt)
+    roleloader = getLoader(info).roles
+    rows = await roleloader.execute_select(stmt)
     return rows
+
+@strawberry.field()
+async def roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
+    rows = await resolve_roles_on_user(self, info, user_id=user_id)
+    return rows
+
+@strawberry.field()
+async def roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
+    rows = await resolve_roles_on_group(self, info=info, group_id=group_id)
+    return rows
+
 #####################################################################
 #
 # Mutation section

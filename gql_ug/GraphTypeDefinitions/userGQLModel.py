@@ -15,8 +15,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-def getLoader(info):
-    return info.context["loaders"]
+from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
 
 def getUser(info):
     return info.context["user"]

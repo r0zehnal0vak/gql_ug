@@ -14,8 +14,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-def getLoader(info):
-    return info.context["all"]
+from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
 
 RoleTypeGQLModel = Annotated["RoleTypeGQLModel", strawberry.lazy(".roleTypeGQLModel")]
 

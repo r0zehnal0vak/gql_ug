@@ -3,7 +3,7 @@ import uuid
 import datetime
 import typing
 
-IDType = strawberry.ID
+# IDType = strawberry.ID
 IDType = uuid.UUID
 
 class BaseGQLModel:

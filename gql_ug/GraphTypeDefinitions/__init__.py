@@ -1527,4 +1527,6 @@ from .roleGQLModel import RoleGQLModel
 from .roleCategoryGQLModel import RoleCategoryGQLModel
 from .roleTypeGQLModel import RoleTypeGQLModel
 
-schema = strawberryA.federation.Schema(query=Query, types=(UserGQLModel, strawberryA.ID, uuid.UUID), mutation=Mutation)
+from .RBACObjectGQLModel import RBACObjectGQLModel
+from .BaseGQLModel import IDType
+schema = strawberryA.federation.Schema(query=Query, types=(RBACObjectGQLModel, IDType), mutation=Mutation)

@@ -47,3 +47,6 @@ class Query:
 
     from .roleGQLModel import roles_on_user
     roles_on_user = roles_on_user
+
+    from .RBACObjectGQLModel import rbac_by_id
+    rbac_by_id = rbac_by_id

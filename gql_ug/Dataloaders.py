@@ -439,6 +439,10 @@ def getUserFromInfo(info):
     logging.debug("getUserFromInfo", result)
     return result
 
+def getLoadersFromInfo(info) -> Loaders:
+    context = info.context
+    loaders = context["loaders"]
+    return loaders
 
 def createLoadersContext(asyncSessionMaker):
     return {
