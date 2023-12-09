@@ -16,7 +16,7 @@ from ._GraphResolvers import (
 )
 
 def getLoader(info):
-    return info.context["all"]
+    return info.context["loaders"]
 
 def getUser(info):
     return info.context["user"]
@@ -110,11 +110,13 @@ class UserInputWhereFilter:
 @strawberry.field(description="""Returns a list of users (paged)""")
 async def user_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: Optional[UserInputWhereFilter] = None
+    where: Optional[UserInputWhereFilter] = None,
+    order_by: Optional[str] = None,
+    desc: Optional[bool] = None
 ) -> List[UserGQLModel]:
     wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).users
-    result = await loader.page(skip, limit, where=wheredict)
+    result = await loader.page(skip, limit, where=wheredict, orderby=order_by, desc=desc)
     return result
 
 @strawberry.field(description="""Finds an user by their id""")

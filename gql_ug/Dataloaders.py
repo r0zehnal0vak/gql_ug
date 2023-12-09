@@ -141,7 +141,7 @@ def prepareSelect(model, where: dict):
     result = baseStatement.filter(filterStatement)
     return result
 
-def createIdLoader(asyncSessionMaker, dbModel) :
+def createIdLoader_(asyncSessionMaker, dbModel) :
 
     mainstmt = select(dbModel)
     filtermethod = dbModel.id.in_
@@ -392,3 +392,55 @@ async def createLoaders_3(asyncSessionMaker):
             )
 
     return Loaders()
+
+demouser = {
+    "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+    "name": "John",
+    "surname": "Newbie",
+    "email": "john.newbie@world.com",
+    "roles": [
+        {
+            "valid": True,
+            "group": {
+                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                "name": "Uni"
+            },
+            "roletype": {
+                "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
+                "name": "administrátor"
+            }
+        },
+        {
+            "valid": True,
+            "group": {
+                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                "name": "Uni"
+            },
+            "roletype": {
+                "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
+                "name": "rektor"
+            }
+        }
+    ]
+}
+
+def getUserFromInfo(info):
+    context = info.context
+    #print(list(context.keys()))
+    result = context.get("user", None)
+    if result is None:
+        authorization = context["request"].headers.get("Authorization", None)
+        if authorization is not None:
+            if 'Bearer ' in authorization:
+                token = authorization.split(' ')[1]
+                if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
+                    result = demouser
+                    context["user"] = result
+    logging.debug("getUserFromInfo", result)
+    return result
+
+
+def createLoadersContext(asyncSessionMaker):
+    return {
+        "loaders": createLoaders(asyncSessionMaker)
+    }

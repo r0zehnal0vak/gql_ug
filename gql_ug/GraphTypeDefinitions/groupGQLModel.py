@@ -108,11 +108,13 @@ class GroupInputWhereFilter:
 @strawberry.field(description="""Returns a list of groups (paged)""")
 async def group_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: Optional[GroupInputWhereFilter] = None
+    where: Optional[GroupInputWhereFilter] = None,
+    order_by: Optional[str] = None,
+    desc: Optional[bool] = None
 ) -> List[GroupGQLModel]:
     wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).groups
-    result = await loader.page(skip, limit, where=wheredict)
+    result = await loader.page(skip, limit, where=wheredict, orderby=order_by, desc=desc)
     return result
 
 @strawberry.field(description="""Finds a group by its id""")

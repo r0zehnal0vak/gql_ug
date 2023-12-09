@@ -86,10 +86,12 @@ class RoleInputWhereFilter:
     valid: bool
     startdate: datetime.datetime
     enddate: datetime.datetime
+    # from .groupGQLModel import GroupInputWhereFilter
+    # from .userGQLModel import UserInputWhereFilter
+    # from .roleTypeGQLModel import RoleTypeInputWhereFilter
     group: GroupInputWhereFilter
     user: UserInputWhereFilter
     roletype: RoleTypeInputWhereFilter
-
 
 @strawberry.field()
 async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
