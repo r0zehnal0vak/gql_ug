@@ -1,11 +1,11 @@
+## Execution
 
-
-```
+```bash
 pytest --cov-report term-missing --cov=gql_ug tests -x
 ```
 
-```
-uvicorn main:app --env-file environment.txt --port 8001 --reload
+```bash
+uvicorn main:app --env-file environment.txt --port 8000 --reload
 ```
 
 ```gql
@@ -18,3 +18,20 @@ query {
   }
 }
 ```
+
+## Environment variables
+
+### DB related variables
+- POSTGRES_USER=postgres
+- POSTGRES_PASSWORD=example
+- POSTGRES_HOST=postgres:5432
+- POSTGRES_DB=data
+
+### Authorization related variables
+- JWTPUBLICKEYURL=http://localhost:8000/oauth/publickey
+- JWTRESOLVEUSERPATHURL=http://localhost:8000/oauth/userinfo
+- ROLELISTURL=http://localhost:8088/gql/
+- RBACURL=http://localhost:8088/gql
+
+### 
+- DEMO=true
