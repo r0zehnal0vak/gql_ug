@@ -4,6 +4,7 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from .shared import get_demodata
 import main
 
 main.connectionString = "sqlite+aiosqlite:///:memory:"

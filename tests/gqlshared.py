@@ -187,13 +187,14 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
     return result_test
 
 def createFrontendQuery(query="{}", variables={}, asserts=[]):
+    query = changeGQLQuery(query)
     @pytest.mark.asyncio
     async def test_frontend_query():    
         logging.debug("createFrontendQuery")
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
         context_value = createContext(async_session_maker)
-        query = changeGQLQuery(query)
+        
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
 
