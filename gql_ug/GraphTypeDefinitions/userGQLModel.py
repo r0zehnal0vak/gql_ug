@@ -147,19 +147,19 @@ async def user_by_letters(
     result = await loader.execute_select(stmt)
     return result
 
-from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
+# from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
 
-@strawberry.field(description="""Finds users who plays in a group a roletype""")
-async def users_by_group_and_role_type(
-    self,
-    info: strawberry.types.Info,
-    group_id: IDType,
-    role_type_id: IDType,
-) -> List[UserGQLModel]:
-    # result = await resolveUserByRoleTypeAndGroup(session,  group_id, role_type_id)
-    loader = getLoader(info).users
-    result = await loader.execute_select(UserByRoleTypeAndGroupStatement)
-    return result
+# @strawberry.field(description="""Finds users who plays in a group a roletype""")
+# async def users_by_group_and_role_type(
+#     self,
+#     info: strawberry.types.Info,
+#     group_id: IDType,
+#     role_type_id: IDType,
+# ) -> List[UserGQLModel]:
+#     # result = await resolveUserByRoleTypeAndGroup(session,  group_id, role_type_id)
+#     loader = getLoader(info).users
+#     result = await loader.execute_select(UserByRoleTypeAndGroupStatement)
+#     return result
 
 
 #####################################################################

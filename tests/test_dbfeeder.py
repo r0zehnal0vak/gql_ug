@@ -13,7 +13,6 @@ from tests.shared import prepare_demodata, prepare_in_memory_sqllite, get_demoda
 
 from gql_ug.DBFeeder import predefineAllDataStructures
 
-# import gql_ug.GraphResolvers
 @pytest.mark.asyncio
 async def _test_load_system_data():
     async_session_maker = await prepare_in_memory_sqllite()

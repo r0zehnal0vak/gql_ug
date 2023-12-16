@@ -95,7 +95,7 @@ class RoleInputWhereFilter:
 @strawberry.field()
 async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     loader = getLoader(info).roles
-    rows = await loader.filter_by(user_id=f"{user_id}")
+    rows = await loader.filter_by(user_id=user_id)
     return rows
 
 
@@ -193,11 +193,8 @@ async def role_update(self,
     updatedrow = await loader.update(role)
 
     result = RoleResultGQLModel()
-    result.msg = "ok"
+    result.msg = "fail" if updatedrow is None else "ok"
     result.id = role.id
-    
-    if updatedrow is None:
-        result.msg = "fail"        
     
     return result
 

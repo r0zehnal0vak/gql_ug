@@ -116,10 +116,8 @@ async def group_type_update(self, info: strawberry.types.Info, group_type: Group
     
     updatedrow = await loader.update(group_type)
     result = GroupTypeResultGQLModel()
-    result.msg = "ok"
     result.id = group_type.id
-    if updatedrow is None:
-        result.msg = "fail"
+    result.msg = "fail" if updatedrow is None else "ok"
     
     return result
 
@@ -132,9 +130,6 @@ async def group_type_insert(self, info: strawberry.types.Info, group_type: Group
     updatedrow = await loader.insert(group_type)
     result = GroupTypeResultGQLModel()
     result.id = updatedrow.id
-    result.msg = "ok"
-
-    if updatedrow is None:
-        result.msg = "fail"
+    result.msg = "fail" if updatedrow is None else "ok"
     
     return result    

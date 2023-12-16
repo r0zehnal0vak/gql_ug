@@ -36,10 +36,8 @@ class GroupGQLModel(BaseGQLModel):
 
     @strawberry.field(description="""Group's validity (still exists?)""")
     def valid(self) -> bool:
-        if not self.valid:
-            return False
-        else:
-            return self.valid
+        result = False if not self.valid else self.valid 
+        return result
 
 
     @strawberry.field(description="""Group's type (like Department)""")
@@ -204,11 +202,9 @@ async def group_update(self, info: strawberry.types.Info, group: GroupUpdateGQLM
     
     updatedrow = await loader.update(group)
     #print(updatedrow, updatedrow.id, updatedrow.name, flush=True)
-    if updatedrow is None:
-        return GroupResultGQLModel(id=group.id, msg="fail")
-    else:
-        return GroupResultGQLModel(id=group.id, msg="ok")
-    
+    id = group.id
+    msg = "fail" if updatedrow is None else "ok"
+    return GroupResultGQLModel(id=id, msg=msg)   
 
 @strawberry.mutation(description="""
     Allows a update of group, also it allows to change the mastergroup of the group
@@ -220,11 +216,8 @@ async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLM
     print("group_insert", updatedrow, updatedrow.id, updatedrow.name, flush=True)
     result = GroupResultGQLModel()
     result.id = updatedrow.id
-    result.msg = "ok"
-
-    if updatedrow is None:
-        result.msg = "fail"
-    
+    result.msg = "fail" if updatedrow is None else "ok"
+        
     return result
 
 @strawberry.mutation(description="""

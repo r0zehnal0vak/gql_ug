@@ -808,88 +808,88 @@ async def createUniversity(session, id=uuid.uuid1(), name="University"):
     return university["id"]
 
 
-from gql_ug.GraphResolvers import (
-    resolveGroupById,
-    resolveUserById,
-    resolveMembershipById,
-)
+# from gql_ug.GraphResolvers import (
+#     resolveGroupById,
+#     resolveUserById,
+#     resolveMembershipById,
+# )
 
 
-async def importUg(session, data):
-    ids = {}
-    for group in data["groups"]:
-        id = group.get("id", None)
-        if id is None:
-            raise Exception(f"id must be defined on group {group}")
-        else:
-            groupRecord = await resolveGroupById(session, id)
-            if not groupRecord is None:
-                raise Exception(f"there already exists group with id {id}")
-            elif id in ids:
-                raise Exception(
-                    f"this import has multiple use of id {id} see {ids[id]}"
-                )
-            else:
-                ids[id] = {"id": id, "type": "group", "name": group["name"]}
+# async def importUg(session, data):
+#     ids = {}
+#     for group in data["groups"]:
+#         id = group.get("id", None)
+#         if id is None:
+#             raise Exception(f"id must be defined on group {group}")
+#         else:
+#             groupRecord = await resolveGroupById(session, id)
+#             if not groupRecord is None:
+#                 raise Exception(f"there already exists group with id {id}")
+#             elif id in ids:
+#                 raise Exception(
+#                     f"this import has multiple use of id {id} see {ids[id]}"
+#                 )
+#             else:
+#                 ids[id] = {"id": id, "type": "group", "name": group["name"]}
 
-    for user in data["users"]:
-        id = user.get("id", None)
-        if id is None:
-            raise Exception(f"id must be defined on user {user}")
-        else:
-            userRecord = await resolveUserById(session, id)
-            if not userRecord is None:
-                raise Exception(f"there already exists user with id {id}")
-            elif id in ids:
-                raise Exception(
-                    f"this import has multiple use of id {id} see {ids[id]}"
-                )
-            else:
-                ids[id] = {"id": id, "type": "user", "name": user["email"]}
+#     for user in data["users"]:
+#         id = user.get("id", None)
+#         if id is None:
+#             raise Exception(f"id must be defined on user {user}")
+#         else:
+#             userRecord = await resolveUserById(session, id)
+#             if not userRecord is None:
+#                 raise Exception(f"there already exists user with id {id}")
+#             elif id in ids:
+#                 raise Exception(
+#                     f"this import has multiple use of id {id} see {ids[id]}"
+#                 )
+#             else:
+#                 ids[id] = {"id": id, "type": "user", "name": user["email"]}
 
-    for membership in data["memberships"]:
-        id = membership.get("id", None)
-        if id is None:
-            raise Exception(f"id must be defined on membership {membership}")
-        else:
-            membershipRecord = await resolveMembershipById(session, id)
-            if not membershipRecord is None:
-                raise Exception(f"there already exists membership with id {id}")
-            elif id in ids:
-                raise Exception(
-                    f"this import has multiple use of id {id} see {ids[id]}"
-                )
-            else:
-                ids[id] = {"id": id, "type": "membership", "name": membership["id"]}
+#     for membership in data["memberships"]:
+#         id = membership.get("id", None)
+#         if id is None:
+#             raise Exception(f"id must be defined on membership {membership}")
+#         else:
+#             membershipRecord = await resolveMembershipById(session, id)
+#             if not membershipRecord is None:
+#                 raise Exception(f"there already exists membership with id {id}")
+#             elif id in ids:
+#                 raise Exception(
+#                     f"this import has multiple use of id {id} see {ids[id]}"
+#                 )
+#             else:
+#                 ids[id] = {"id": id, "type": "membership", "name": membership["id"]}
 
-    def justThoseKeys(data, keys):
-        result = {}
-        for key in keys:
-            if key in data:
-                result[key] = data[key]
-        return result
+#     def justThoseKeys(data, keys):
+#         result = {}
+#         for key in keys:
+#             if key in data:
+#                 result[key] = data[key]
+#         return result
 
-    groupKeys = ["id", "name", "grouptype_id", "mastergroup_id", "valid"]
-    groupsToAdd = [
-        GroupModel(**justThoseKeys(group, groupKeys)) for group in data["groups"]
-    ]
+#     groupKeys = ["id", "name", "grouptype_id", "mastergroup_id", "valid"]
+#     groupsToAdd = [
+#         GroupModel(**justThoseKeys(group, groupKeys)) for group in data["groups"]
+#     ]
 
-    userKeys = ["id", "name", "surname", "email", "valid"]
-    usersToAdd = [UserModel(**justThoseKeys(user, userKeys)) for user in data["users"]]
+#     userKeys = ["id", "name", "surname", "email", "valid"]
+#     usersToAdd = [UserModel(**justThoseKeys(user, userKeys)) for user in data["users"]]
 
-    membershipKeys = ["id", "group_id", "user_id", "valid"]
-    membershipsToAdd = [
-        MembershipModel(**justThoseKeys(membership, membershipKeys))
-        for membership in data["memberships"]
-    ]
+#     membershipKeys = ["id", "group_id", "user_id", "valid"]
+#     membershipsToAdd = [
+#         MembershipModel(**justThoseKeys(membership, membershipKeys))
+#         for membership in data["memberships"]
+#     ]
 
-    allEntitites = groupsToAdd + usersToAdd + membershipsToAdd
+#     allEntitites = groupsToAdd + usersToAdd + membershipsToAdd
 
-    async with session.begin():
-        session.add_all(allEntitites)
-    await session.commit()
+#     async with session.begin():
+#         session.add_all(allEntitites)
+#     await session.commit()
 
-    pass
+#     pass
 
 
 
