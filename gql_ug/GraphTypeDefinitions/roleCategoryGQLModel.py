@@ -102,13 +102,8 @@ async def role_category_update(self,
     row = await loader.update(role_category)
 
     result = RoleCategoryResultGQLModel()
-    result.msg = "ok"
     result.id = role_category.id
-    if row is None:
-        result.msg = "fail"
-    else:
-        result.id = row.id
-
+    result.msg = result.msg = "fail" if row is None else "ok"
     
     return result
 

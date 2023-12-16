@@ -207,11 +207,8 @@ async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLMode
     result = UserResultGQLModel()
     result.id = user.id
 
-    if updatedrow is None:
-        result.msg = "fail"
-    else:
-        result.msg = "ok"
-    print("user_update", result.msg, flush=True)
+    result.msg = "fail" if updatedrow is None else "ok"
+    # print("user_update", result.msg, flush=True)
     return result
 
 @strawberry.mutation

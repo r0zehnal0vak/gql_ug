@@ -214,6 +214,8 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
     return test_frontend_query
 
 def createUpdateQuery(query="{}", variables={}, tableName=""):
+    query = changeGQLQuery(query)
+
     @pytest.mark.asyncio
     async def test_update():
         logging.debug("test_update")
@@ -243,7 +245,6 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
         variables["lastchange"] = lastchange
         variables["id"] = f'{variables["id"]}'
         context_value = createContext(async_session_maker)
-        query = changeGQLQuery(query)
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
 

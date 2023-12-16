@@ -115,11 +115,9 @@ async def role_type_update(self,
     if row is not None:
         print("role_type_update", row, row.name, row.id, flush=True)
     result = RoleTypeResultGQLModel()
-    result.msg = "ok"
     result.id = role_type.id
-    if row is None:
-        result.msg = "fail"
-    
+    result.msg = "fail" if row is None else "ok"
+   
     return result
 
 @strawberry.mutation(description="""Inserts a new roleType record""")
