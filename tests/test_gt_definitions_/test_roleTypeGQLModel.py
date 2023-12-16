@@ -25,6 +25,7 @@ test_role_type_insert = createFrontendQuery(query="""mutation ($id: UUID!, $name
     id
     roleType {
       name
+      nameEn
       lastchange
       roles { id }
     }

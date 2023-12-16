@@ -19,8 +19,8 @@ class RBACObjectGQLModel:
 
     @classmethod
     async def resolve_reference(cls, info: strawberry.types.Info, id: IDType):
-        if id is None:
-            return None
+        if id is None: return None
+                
         if isinstance(id, str): id = uuid.UUID(id)
 
         loaderU = getLoader(info).users
@@ -28,15 +28,10 @@ class RBACObjectGQLModel:
         futures = [loaderU.load(id), loaderG.load(id)]
         rows = await asyncio.gather(*futures)
 
-        asUser = False
-        asGroup = False
-        if rows[0] is not None:
-            asUser = True
-        if rows[1] is not None:
-            asGroup = True
+        asUser = rows[0] is not None
+        asGroup = rows[1] is not None
 
-        if asUser is None and asGroup is None:
-            return None
+        if asUser is None and asGroup is None: return None
         
         result = RBACObjectGQLModel(asGroup=asGroup, asUser=asUser)
         result.id = id

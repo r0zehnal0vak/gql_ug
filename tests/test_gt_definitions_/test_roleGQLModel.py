@@ -52,7 +52,6 @@ test_role_larger = createFrontendQuery(query="""query($user_id: UUID!){
       id
     }
     roletype { id }
-    
   }
 }""", variables={"user_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"})
 
@@ -83,3 +82,18 @@ test_resolve_roles_on_group = createFrontendQuery(query="""query($group_id: UUID
     
   }
 }""", variables={"group_id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003"})
+
+test_resolve_roles_on_group_subgroup = createFrontendQuery(query="""query($group_id: UUID!){
+  rolesOnGroup(groupId: $group_id) {
+    id
+    group {
+      id
+    }
+    user {
+      id
+    }
+    roletype { id }
+    
+  }
+}""", variables={"group_id": "2d9dd1c8-a4a2-11ed-b9df-0242ac120003"})
+

@@ -121,11 +121,8 @@ async def membership_update(self,
     updatedrow = await loader.update(membership)
 
     result = MembershipResultGQLModel()
-    result.msg = "ok"
     result.id = membership.id
-
-    if updatedrow is None:
-        result.msg = "fail"
+    result.msg = "fail" if updatedrow is None else "ok"
     
     return result
 

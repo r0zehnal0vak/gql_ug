@@ -45,6 +45,10 @@ class UserGQLModel(BaseGQLModel):
     def surname(self) -> str:
         return self.surname
 
+    @strawberry.field(description="""User's family name (like Obama)""")
+    def fullname(self) -> str:
+        return self.fullname
+
     @strawberry.field(description="""User's email""")
     def email(self) -> Union[str, None]:
         return self.email
@@ -95,6 +99,12 @@ class UserGQLModel(BaseGQLModel):
 from .utils import createInputs
 from dataclasses import dataclass
 #MembershipInputWhereFilter = Annotated["MembershipInputWhereFilter", strawberry.lazy(".membershipGQLModel")]
+
+from ._GraphResolvers import createRootResolver_by_id
+user_by_id = createRootResolver_by_id(
+    scalarType=UserGQLModel, 
+    description="Returns a list of users (paged)")
+
 @createInputs
 @dataclass
 class UserInputWhereFilter:
@@ -106,24 +116,32 @@ class UserInputWhereFilter:
     from .membershipGQLModel import MembershipInputWhereFilter
     memberships: MembershipInputWhereFilter
 
-@strawberry.field(description="""Returns a list of users (paged)""")
-async def user_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: Optional[UserInputWhereFilter] = None,
-    order_by: Optional[str] = None,
-    desc: Optional[bool] = None
-) -> List[UserGQLModel]:
-    wheredict = None if where is None else strawberry.asdict(where)
-    loader = getLoader(info).users
-    result = await loader.page(skip, limit, where=wheredict, orderby=order_by, desc=desc)
-    return result
+from ._GraphResolvers import createRootResolver_by_page
+user_page = createRootResolver_by_page(
+    scalarType=UserGQLModel,
+    whereFilterType=UserInputWhereFilter,
+    description="Returns a list of users (paged)",
+    loaderLambda=lambda info: getLoader(info).users
+)
 
-@strawberry.field(description="""Finds an user by their id""")
-async def user_by_id(
-    self, info: strawberry.types.Info, id: IDType
-) -> Union[UserGQLModel, None]:
-    result = await UserGQLModel.resolve_reference(info=info, id=id)
-    return result
+# @strawberry.field(description="""Returns a list of users (paged)""")
+# async def user_page(
+#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+#     where: Optional[UserInputWhereFilter] = None,
+#     order_by: Optional[str] = None,
+#     desc: Optional[bool] = None
+# ) -> List[UserGQLModel]:
+#     wheredict = None if where is None else strawberry.asdict(where)
+#     loader = getLoader(info).users
+#     result = await loader.page(skip, limit, where=wheredict, orderby=order_by, desc=desc)
+#     return result
+
+# @strawberry.field(description="""Finds an user by their id""")
+# async def user_by_id(
+#     self, info: strawberry.types.Info, id: IDType
+# ) -> Union[UserGQLModel, None]:
+#     result = await UserGQLModel.resolve_reference(info=info, id=id)
+#     return result
 
 @strawberry.field(
     description="""Finds an user by letters in name and surname, letters should be atleast three"""

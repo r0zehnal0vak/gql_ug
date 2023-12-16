@@ -17,7 +17,8 @@ def resolve_name(self) -> str:
 
 @strawberry.field(description="""English name""")
 def resolve_name_en(self) -> str:
-    return self.name_en
+    result = self.name_en if self.name_en else ""
+    return result
 
 @strawberry.field(description="""Time of last update""")
 def resolve_lastchange(self) -> datetime.datetime:
@@ -25,7 +26,7 @@ def resolve_lastchange(self) -> datetime.datetime:
 
 @strawberry.field(description="""Time of entity introduction""")
 def resolve_created(self) -> typing.Optional[datetime.datetime]:
-    return self.lastchange
+    return self.created
 
 async def resolve_user(user_id):
     from .userGQLModel import UserGQLModel
@@ -34,7 +35,7 @@ async def resolve_user(user_id):
     
 @strawberry.field(description="""Who created entity""")
 async def resolve_createdby(self) -> typing.Optional["UserGQLModel"]:
-    return await resolve_user(self.created_by)
+    return await resolve_user(self.createdby)
 
 @strawberry.field(description="""Who made last change""")
 async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
@@ -118,7 +119,9 @@ def createRootResolver_by_page(
     loaderLambda = lambda info: None, 
     description="Retrieves items paged", 
     skip: int=0, 
-    limit: int=10):
+    limit: int=10,
+    order_by: typing.Optional[str] = None,
+    desc: typing.Optional[bool] = None):
 
     assert scalarType is not None
     assert whereFilterType is not None
@@ -131,6 +134,6 @@ def createRootResolver_by_page(
         loader = loaderLambda(info)
         assert loader is not None
         wf = None if where is None else strawberry.asdict(where)
-        result = await loader.page(skip=skip, limit=limit, where=wf)
+        result = await loader.page(skip=skip, limit=limit, where=wf, orderby=order_by, desc=desc)
         return result
     return paged

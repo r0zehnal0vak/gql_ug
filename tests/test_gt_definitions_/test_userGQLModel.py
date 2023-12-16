@@ -38,6 +38,7 @@ test_user_larger = createFrontendQuery(query="""query($id: UUID!){
     id
     name
     surname
+    fullname
     email
     membership {
       id
@@ -47,6 +48,7 @@ test_user_larger = createFrontendQuery(query="""query($id: UUID!){
     roles {
       id
     }
-    
+    createdby { id }
+    changedby { id }
   }
 }""", variables={"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"})
