@@ -13,7 +13,8 @@ from gql_ug.DBDefinitions import (
     GroupTypeModel,
     RoleModel,
     RoleTypeModel,
-    RoleCategoryModel
+    RoleCategoryModel,
+    RoleTypeListModel
 )
 
 from uoishelpers.resolvers import select, update, delete
@@ -250,6 +251,7 @@ class Loaders:
     roles = None
     roletypes = None
     rolecategories = None
+    roletypelists = None
     pass
 
 async def _createLoaders(
@@ -281,6 +283,7 @@ dbmodels = {
     "roles": RoleModel,
     "roletypes": RoleTypeModel,
     "rolecategories": RoleCategoryModel,
+    "roletypelists": RoleTypeListModel
 }
 
 def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:

@@ -12,16 +12,14 @@ from .UUID import UUIDColumn, UUIDFKey
 from .Base import BaseModel
 
 
-class GroupTypeModel(BaseModel):
-    """Urcuje typ skupiny (fakulta, katedra, studijni skupina apod.)"""
+class RoleTypeListModel(BaseModel):
+    """Urcuje typ role (Vedouci katedry, dekan apod.)"""
 
-    __tablename__ = "grouptypes"
+    __tablename__ = "roletypelists"
 
     id = UUIDColumn()
-    name = Column(String, comment="name of the type")
-    name_en = Column(String, comment="english name of the type")
-
-    groups = relationship("GroupModel", back_populates="grouptype")
+    type_id = Column(ForeignKey("roletypes.id"), index=True, nullable=True)
+    list_id = UUIDFKey(comment="list which item belongs to")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="when record has been created")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp")

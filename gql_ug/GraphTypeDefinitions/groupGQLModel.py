@@ -20,6 +20,15 @@ GroupTypeGQLModel = Annotated["GroupTypeGQLModel", strawberry.lazy(".groupTypeGQ
 MembershipGQLModel = Annotated["MembershipGQLModel", strawberry.lazy(".membershipGQLModel")]
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
 
+GroupGQLModel_description = """
+# Reason
+
+Group is entity with members. 
+It can have also mastergroup.
+Mastergroup can be only one.
+Groups are organized in tree structures.
+There also can be defined roles on the group.
+"""
 @strawberry.federation.type(keys=["id"], description="""Entity representing a group""")
 class GroupGQLModel(BaseGQLModel):
     @classmethod
@@ -38,7 +47,6 @@ class GroupGQLModel(BaseGQLModel):
     def valid(self) -> bool:
         result = False if not self.valid else self.valid 
         return result
-
 
     @strawberry.field(description="""Group's type (like Department)""")
     async def grouptype(

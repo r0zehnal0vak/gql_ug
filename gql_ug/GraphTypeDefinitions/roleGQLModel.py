@@ -105,6 +105,7 @@ from gql_ug.DBDefinitions import (
 from sqlalchemy import select
 
 async def resolve_roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
+    # ve vsech skupinach, kde je user clenem najdi vsechny role a ty vrat
     loaderm = getLoader(info).memberships
     rows = await loaderm.filter_by(user_id = user_id)
     groupids = [row.group_id for row in rows]
@@ -119,6 +120,7 @@ async def resolve_roles_on_user(self, info: strawberry.types.Info, user_id: IDTy
 
 
 async def resolve_roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
+    # najdi vsechny role pro skupinu a nadrizene skupiny
     grouploader = getLoader(info).groups
     groupids = []
     cid = group_id
@@ -137,11 +139,23 @@ async def resolve_roles_on_group(self, info: strawberry.types.Info, group_id: ID
     rows = await roleloader.execute_select(stmt)
     return rows
 
-@strawberry.field()
+roles_on_user_decsription = """
+# Reason
+
+Returns all roles applicable on an user (defined by userId).
+If there is a dean, role with type named "dean" will be enlisted.
+"""
+@strawberry.field(description=roles_on_user_decsription)
 async def roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     rows = await resolve_roles_on_user(self, info, user_id=user_id)
     return rows
 
+roles_on_group_decsription = """
+# Reason
+
+Returns all roles applicable on a group (defined by groupId).
+If the group is deparment which is subgroup of faculty, role with type named "dean" will be enlisted.
+"""
 @strawberry.field()
 async def roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
     rows = await resolve_roles_on_group(self, info=info, group_id=group_id)
