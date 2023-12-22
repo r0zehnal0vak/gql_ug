@@ -69,6 +69,15 @@ class MembershipGQLModel(BaseGQLModel):
     async def enddate(self) -> Union[datetime.datetime, None]:
         return self.enddate
 
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.group_id)
+        return result    
+
 #####################################################################
 #
 # Special fields for query

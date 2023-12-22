@@ -1,7 +1,7 @@
 ## Execution
 
 ```bash
-pytest --cov-report term-missing --cov=gql_ug tests -x
+pytest --cov-report term-missing --cov=gql_ug tests --log-cli-level=INFO -x
 ```
 
 ```bash

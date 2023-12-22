@@ -23,12 +23,13 @@ test_group_update = createUpdateQuery(tableName="groups", query="""mutation ($id
     group {
       name
       lastchange
+      email
     }
   }
 }""", variables={"id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003", "name": "newname"})
 
-test_group_insert = createFrontendQuery(query="""mutation ($id: UUID!, $name: String!) {
-  result: groupInsert(group: {id: $id, name: $name}) {
+test_group_insert = createFrontendQuery(query="""mutation ($id: UUID!, $name: String!, $grouptype_id: UUID!) {
+  result: groupInsert(group: {id: $id, name: $name, grouptypeId: $grouptype_id }) {
     id
     group {
       name
@@ -36,7 +37,7 @@ test_group_insert = createFrontendQuery(query="""mutation ($id: UUID!, $name: St
       valid
     }
   }
-}""", variables={"id": "850b03cf-a69a-4a6c-b980-1afaf5be174b", "name": "newname"})
+}""", variables={"id": "850b03cf-a69a-4a6c-b980-1afaf5be174b", "name": "newname", "grouptype_id": "cd49e157-610c-11ed-9312-001a7dda7110"})
 
 test_group_larger = createFrontendQuery(query="""query($id: UUID!){
   groupById(id: $id) {

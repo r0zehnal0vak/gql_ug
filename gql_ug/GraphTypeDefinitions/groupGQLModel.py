@@ -113,6 +113,14 @@ class GroupGQLModel(BaseGQLModel):
         result = await loader.filter_by(group_id=self.id)
         return result
 
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
+        return result    
 
 #####################################################################
 #
@@ -136,7 +144,7 @@ class GroupInputWhereFilter:
 async def group_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: Optional[GroupInputWhereFilter] = None,
-    order_by: Optional[str] = None,
+    orderby: Optional[str] = None,
     desc: Optional[bool] = None
 ) -> List[GroupGQLModel]:
     wheredict = None if where is None else strawberry.asdict(where)
@@ -155,6 +163,7 @@ async def group_by_id(
 
 @strawberry.field(
     description="""Finds an user by letters in name and surname, letters should be atleast three""",
+    deprecation_reason='replaced by `query($letters: String!){groupPage(where: {name: {_like: $letters}}) { id name }}`',
     permission_classes=[OnlyForAuthentized()]
 )
 async def group_by_letters(

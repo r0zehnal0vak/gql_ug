@@ -66,13 +66,13 @@ class UserGQLModel(BaseGQLModel):
     def valid(self) -> Optional[bool]:
         return self.valid
 
-    @strawberry.field(
-        description="""GDPRInfo for permision test""", 
-        permission_classes=[OnlyForAuthentized(), UserGDPRPermission])
-    def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
-        actinguser = getUser(info)
-        print(actinguser)
-        return "GDPRInfo"
+    # @strawberry.field(
+    #     description="""GDPRInfo for permision test""", 
+    #     permission_classes=[OnlyForAuthentized(), UserGDPRPermission])
+    # def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
+    #     actinguser = getUser(info)
+    #     print(actinguser)
+    #     return "GDPRInfo"
 
     @strawberry.field(
         description="""List of groups, where the user is member""",
@@ -104,6 +104,15 @@ class UserGQLModel(BaseGQLModel):
         results = await asyncio.gather(*results)
         results = filter(lambda item: item.grouptype_id == grouptype_id, results)
         return results
+    
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""Who made last change""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
+        return result    
 
 #####################################################################
 #
@@ -160,6 +169,7 @@ user_page = createRootResolver_by_page(
 
 @strawberry.field(
     description="""Finds an user by letters in name and surname, letters should be atleast three""",
+    deprecation_reason='replaced by `query($letters: String!){userPage(where: {fullname: {_like: $letters}}) { id fullname }}`',
     permission_classes=[OnlyForAuthentized()])
 async def user_by_letters(
     self,

@@ -6,99 +6,18 @@ import uuid
 @pytest_asyncio.fixture
 async def GQLInsertQueries():
     result = {
-        "rolecategories": {
-            "readp": """{ result: roleCategoryPage { __typename, id, name, nameEn}}""",
-            "read": """query ($id: UUID!) { result: roleCategoryById(id: $id) { __typename, id, name, nameEn }}""",
+        "forms": {
             "create": """
-mutation($id: UUID!, $name: String!, $name_en: String) {
-  result: roleCategoryInsert(roleCategory: {id: $id, name: $name, nameEn: $name_en}) {
+mutation ($id: UUID!, $name: String!, $type_id: UUID!, $name_en: String!) {
+  formInsert(
+    form: {id: $id, name: $name, typeId: $type_id, nameEn: $name_en}
+  ) {
     id
     msg
-    result: roleCategory {
-      id
-      lastchange
-    }
   }
-}
-"""            
-        },
-        "roletypes": {
-            "readp": """{ result: roleTypePage { __typename, id, name, nameEn}}""",
-            "read": """query ($id: UUID!) { result: roleTypeById(id: $id) { __typename, id, name, nameEn }}""",
-            "create": """
-mutation($id: UUID!, $category_id: UUID!, $name: String!, $name_en: String) {
-  result: roleTypeInsert(roleType: {id: $id, categoryId: $category_id, name: $name, nameEn: $name_en}) {
-    id
-    msg
-    result: roleType {
-      id
-      lastchange
-    }
-  }
-}
-"""
+}""",
+            "read": """query($id: UUID!){ result: formById(id: $id) { id }}""",
 },
-        "grouptypes": {
-            "readp": """{ result: groupTypePage { __typename, id, name, nameEn}}""",
-            "read": """query ($id: UUID!) { result: groupTypeById { __typename, id, name, nameEn}}""",
-            "create": """
-mutation($id: UUID!, $name: String!, $name_en: String) {
-  result: groupTypeInsert(groupType: {id: $id, name: $name, nameEn: $name_en}) {
-    id
-    msg
-    result: groupType {
-      id
-      lastchange
-    }
-  }
-}"""
-        },
-        "groups": {
-            "readp": """{ result: groupPage { __typename, id, name, nameEn}}""",
-            "read": """query ($id: UUID!) { result: groupById { __typename, id, name, nameEn}}""",
-            "create": """
-mutation($id: UUID!, $grouptype_id: UUID!, $mastergroup_id: UUID, $name: String!, $name_en: String) {
-  result: groupInsert(group: {id: $id, name: $name, nameEn: $name_en, grouptypeId: $grouptype_id, mastergroupId: $mastergroup_id}) {
-    id
-    msg
-    result: group {
-      id
-      lastchange
-    }
-  }
-}"""        },
-        "users": {
-            "readp": """{ result: userPage { __typename, id, name, surname, email }}""",
-            "read": """query ($id: UUID!) { result: groupById { __typename, id, name, nameEn}}""",
-            "create": """
-mutation($id: UUID!, $name: String!, $surname: String!, $email: String!) {
-  result: userInsert(user: {id: $id, name: $name, surname: $surname, email: $email}) {
-    id
-    msg
-    result: user {
-      id
-      lastchange
-    }
-  }
-}"""            
-        },
-
-        "memberships": {
-            "readp": """{ result: membershipPage { __typename, id, valid }}""",
-            "read": """query ($id: UUID!) { result: membershipById { __typename, id, valid}}""",
-            "create": """
-mutation($id: UUID!, $user_id: UUID!, $group_id: UUID!, $valid: Boolean) {
-  result: membershipInsert(membership: {id: $id, userId: $user_id, groupId: $group_id, valid: $valid}) {
-    id
-    msg
-    result: membership {
-      id
-      lastchange
-    }
-  }
-}"""                        
-        },
-            
         "formsections": {"create": """
 mutation ($id: UUID!, $name: String!, $order: Int!, $name_en: String!, $form_id: UUID!) {
   formSectionInsert(
