@@ -3,7 +3,7 @@ import strawberry
 from typing import List, Optional, Union, Annotated
 import uuid
 from .BaseGQLModel import BaseGQLModel, IDType
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 import gql_ug.GraphTypeDefinitions
 from ._GraphResolvers import (
     resolve_id,
@@ -36,34 +36,44 @@ class RoleGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(description="""If an user has still this role""")
+    @strawberry.field(
+        description="""If an user has still this role""",
+        permission_classes=[OnlyForAuthentized()])
     def valid(self) -> bool:
         return self.valid
 
-    @strawberry.field(description="""When an user has got this role""")
+    @strawberry.field(
+        description="""When an user has got this role""",
+        permission_classes=[OnlyForAuthentized()])
     def startdate(self) -> Union[str, None]:
         return self.startdate
 
-    @strawberry.field(description="""When an user has been removed from this role""")
+    @strawberry.field(
+        description="""When an user has been removed from this role""",
+        permission_classes=[OnlyForAuthentized()])
     def enddate(self) -> Union[str, None]:
         return self.enddate
 
-    @strawberry.field(description="""Role type (like Dean)""")
-    async def roletype(self, info: strawberry.types.Info) -> RoleTypeGQLModel:
+    @strawberry.field(
+        description="""Role type (like Dean)""",
+        permission_classes=[OnlyForAuthentized()])
+    async def roletype(self, info: strawberry.types.Info) -> Optional[RoleTypeGQLModel]:
         # result = await resolveRoleTypeById(session,  self.roletype_id)
         result = await gql_ug.GraphTypeDefinitions.RoleTypeGQLModel.resolve_reference(info, self.roletype_id)
         return result
 
     @strawberry.field(
-        description="""User having this role. Must be member of group?"""
-    )
-    async def user(self, info: strawberry.types.Info) -> UserGQLModel:
+        description="""User having this role. Must be member of group?""",
+        permission_classes=[OnlyForAuthentized()])
+    async def user(self, info: strawberry.types.Info) -> Optional[UserGQLModel]:
         # result = await resolveUserById(session,  self.user_id)
         result = await gql_ug.GraphTypeDefinitions.UserGQLModel.resolve_reference(info, self.user_id)
         return result
 
-    @strawberry.field(description="""Group where user has a role name""")
-    async def group(self, info: strawberry.types.Info) -> GroupGQLModel:
+    @strawberry.field(
+        description="""Group where user has a role name""",
+        permission_classes=[OnlyForAuthentized()])
+    async def group(self, info: strawberry.types.Info) -> Optional[GroupGQLModel]:
         # result = await resolveGroupById(session,  self.group_id)
         result = await gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, self.group_id)
         return result
@@ -92,7 +102,9 @@ class RoleInputWhereFilter:
     user: UserInputWhereFilter
     roletype: RoleTypeInputWhereFilter
 
-@strawberry.field()
+@strawberry.field(
+    description="",
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     loader = getLoader(info).roles
     rows = await loader.filter_by(user_id=user_id)
@@ -145,7 +157,9 @@ roles_on_user_decsription = """
 Returns all roles applicable on an user (defined by userId).
 If there is a dean, role with type named "dean" will be enlisted.
 """
-@strawberry.field(description=roles_on_user_decsription)
+@strawberry.field(
+    description=roles_on_user_decsription,
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     rows = await resolve_roles_on_user(self, info, user_id=user_id)
     return rows
@@ -156,7 +170,9 @@ roles_on_group_decsription = """
 Returns all roles applicable on a group (defined by groupId).
 If the group is deparment which is subgroup of faculty, role with type named "dean" will be enlisted.
 """
-@strawberry.field()
+@strawberry.field(
+    description=roles_on_group_decsription,
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
     rows = await resolve_roles_on_group(self, info=info, group_id=group_id)
     return rows
@@ -197,7 +213,9 @@ class RoleResultGQLModel:
         return result
     
 
-@strawberry.mutation(description="""Updates a role""")
+@strawberry.mutation(
+    description="""Updates a role""",
+    permission_classes=[OnlyForAuthentized()])
 async def role_update(self, 
     info: strawberry.types.Info, 
     role: RoleUpdateGQLModel
@@ -212,7 +230,9 @@ async def role_update(self,
     
     return result
 
-@strawberry.mutation(description="""Inserts a role""")
+@strawberry.mutation(
+    description="""Inserts a role""",
+    permission_classes=[OnlyForAuthentized()])
 async def role_insert(self, 
     info: strawberry.types.Info, 
     role: RoleInsertGQLModel

@@ -5,6 +5,7 @@ import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -41,29 +42,41 @@ class UserGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(description="""User's family name (like Obama)""")
-    def surname(self) -> str:
+    @strawberry.field(
+        description="""User's family name (like Obama)""",
+        permission_classes=[OnlyForAuthentized()])
+    def surname(self) -> Optional[str]:
         return self.surname
 
-    @strawberry.field(description="""User's family name (like Obama)""")
-    def fullname(self) -> str:
+    @strawberry.field(
+        description="""User's family name (like Obama)""",
+        permission_classes=[OnlyForAuthentized()])
+    def fullname(self) -> Optional[str]:
         return self.fullname
 
-    @strawberry.field(description="""User's email""")
-    def email(self) -> Union[str, None]:
+    @strawberry.field(
+        description="""User's email""",
+        permission_classes=[OnlyForAuthentized()])
+    def email(self) -> Optional[str]:
         return self.email
 
-    @strawberry.field(description="""User's validity (if their are member of institution)""")
-    def valid(self) -> bool:
+    @strawberry.field(
+        description="""User's validity (if their are member of institution)""",
+        permission_classes=[OnlyForAuthentized()])
+    def valid(self) -> Optional[bool]:
         return self.valid
 
-    @strawberry.field(description="""GDPRInfo for permision test""", permission_classes=[UserGDPRPermission])
+    @strawberry.field(
+        description="""GDPRInfo for permision test""", permission_classes=[UserGDPRPermission],
+        permission_classes=[OnlyForAuthentized()])
     def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
         actinguser = getUser(info)
         print(actinguser)
         return "GDPRInfo"
 
-    @strawberry.field(description="""List of groups, where the user is member""")
+    @strawberry.field(
+        description="""List of groups, where the user is member""",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def membership(
         self, info: strawberry.types.Info
     ) -> List["MembershipGQLModel"]:
@@ -71,15 +84,17 @@ class UserGQLModel(BaseGQLModel):
         result = await loader.filter_by(user_id=self.id)
         return list(result)
 
-    @strawberry.field(description="""List of roles, which the user has""")
+    @strawberry.field(
+        description="""List of roles, which the user has""",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
         loader = getLoader(info).roles
         result = await loader.filter_by(user_id=self.id)
         return result
 
     @strawberry.field(
-        description="""List of groups given type, where the user is member"""
-    )
+        description="""List of groups given type, where the user is member""",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def member_of(
         self, grouptype_id: IDType, info: strawberry.types.Info
     ) -> List["GroupGQLModel"]:
@@ -144,8 +159,8 @@ user_page = createRootResolver_by_page(
 #     return result
 
 @strawberry.field(
-    description="""Finds an user by letters in name and surname, letters should be atleast three"""
-)
+    description="""Finds an user by letters in name and surname, letters should be atleast three""",
+    permission_classes=[OnlyForAuthentized()])
 async def user_by_letters(
     self,
     info: strawberry.types.Info,
@@ -214,7 +229,9 @@ class UserResultGQLModel:
         result = await UserGQLModel.resolve_reference(info, self.id)
         return result
 
-@strawberry.mutation
+@strawberry.mutation(
+    description="",
+    permission_classes=[OnlyForAuthentized()])
 async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLModel) -> UserResultGQLModel:
     #print("user_update", flush=True)
     #print(user, flush=True)
@@ -229,7 +246,9 @@ async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLMode
     # print("user_update", result.msg, flush=True)
     return result
 
-@strawberry.mutation
+@strawberry.mutation(
+    description="",
+    permission_classes=[OnlyForAuthentized()])
 async def user_insert(self, info: strawberry.types.Info, user: UserInsertGQLModel) -> UserResultGQLModel:
     loader = getLoader(info).users
     

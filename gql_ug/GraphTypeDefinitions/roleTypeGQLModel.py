@@ -4,6 +4,7 @@ import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -34,7 +35,9 @@ class RoleTypeGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(description="""List of roles with this type""")
+    @strawberry.field(
+        description="""List of roles with this type""",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
         # result = await resolveRoleForRoleType(session,  self.id)
         loader = getLoader(info).roles
@@ -56,14 +59,18 @@ class RoleTypeInputWhereFilter:
     from .roleGQLModel import RoleInputWhereFilter
     roles: RoleInputWhereFilter
 
-@strawberry.field(description="""Finds a role type by its id""")
+@strawberry.field(
+    description="""Finds a role type by its id""",
+    permission_classes=[OnlyForAuthentized()])
 async def role_type_by_id(
     self, info: strawberry.types.Info, id: IDType
 ) -> Union[RoleTypeGQLModel, None]:
     result = await RoleTypeGQLModel.resolve_reference(info, id)
     return result
 
-@strawberry.field(description="""Finds all roles types paged""")
+@strawberry.field(
+    description="""Finds all roles types paged""",
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def role_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: Optional[RoleTypeInputWhereFilter] = None
@@ -89,9 +96,11 @@ class RoleTypeUpdateGQLModel:
 
 @strawberry.input
 class RoleTypeInsertGQLModel:
+    category_id: uuid.UUID = None
     id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     name_en: Optional[str] = None
+   
 
 @strawberry.type
 class RoleTypeResultGQLModel:
@@ -103,7 +112,9 @@ class RoleTypeResultGQLModel:
         result = await RoleTypeGQLModel.resolve_reference(info, self.id)
         return result
     
-@strawberry.mutation(description="""Updates existing roleType record""")
+@strawberry.mutation(
+    description="""Updates existing roleType record""",
+    permission_classes=[OnlyForAuthentized()])
 async def role_type_update(self, 
     info: strawberry.types.Info, 
     role_type: RoleTypeUpdateGQLModel
@@ -120,7 +131,9 @@ async def role_type_update(self,
    
     return result
 
-@strawberry.mutation(description="""Inserts a new roleType record""")
+@strawberry.mutation(
+    description="""Inserts a new roleType record""",
+    permission_classes=[OnlyForAuthentized()])
 async def role_type_insert(self, 
     info: strawberry.types.Info, 
     role_type: RoleTypeInsertGQLModel

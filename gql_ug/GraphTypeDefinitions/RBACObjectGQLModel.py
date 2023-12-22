@@ -4,7 +4,7 @@ import asyncio
 from typing import List, Annotated, Optional
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphResolvers import resolve_id
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
 
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
@@ -37,7 +37,9 @@ class RBACObjectGQLModel:
         result.id = id
         return result
 
-    @strawberry.field()
+    @strawberry.field(
+        description="Roles associated with this RBAC",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
         from .roleGQLModel import resolve_roles_on_user, resolve_roles_on_group
         result = []
@@ -47,7 +49,9 @@ class RBACObjectGQLModel:
             result = await resolve_roles_on_group(self, info, group_id=self.id)
         return result
     
-@strawberry.field(description="""Finds an user by their id""")
+@strawberry.field(
+    description="""Finds a rbasobject by its id""",
+    permission_classes=[OnlyForAuthentized()])
 async def rbac_by_id(
     self, info: strawberry.types.Info, id: IDType
 ) -> Optional["RBACObjectGQLModel"]:

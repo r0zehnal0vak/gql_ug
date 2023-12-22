@@ -4,7 +4,7 @@ import uuid
 from typing import List, Optional, Union, Annotated
 import gql_ug.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -35,27 +35,37 @@ class MembershipGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(description="""user""")
+    @strawberry.field(
+        description="""user""",
+        permission_classes=[OnlyForAuthentized()])
     async def user(self, info: strawberry.types.Info) -> Optional["UserGQLModel"]:
         # return self.user
         result = await gql_ug.GraphTypeDefinitions.UserGQLModel.resolve_reference(info=info, id=self.user_id)
         return result
 
-    @strawberry.field(description="""group""")
+    @strawberry.field(
+        description="""group""",
+        permission_classes=[OnlyForAuthentized()])
     async def group(self, info: strawberry.types.Info) -> Optional["GroupGQLModel"]:
         # return self.group
         result = await gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info=info, id=self.group_id)
         return result
 
-    @strawberry.field(description="""is the membership is still valid""")
+    @strawberry.field(
+        description="""is the membership is still valid""",
+        permission_classes=[OnlyForAuthentized()])
     async def valid(self) -> Union[bool, None]:
         return self.valid
 
-    @strawberry.field(description="""date when the membership begins""")
+    @strawberry.field(
+        description="""date when the membership begins""",
+        permission_classes=[OnlyForAuthentized()])
     async def startdate(self) -> Union[datetime.datetime, None]:
         return self.startdate
 
-    @strawberry.field(description="""date when the membership ends""")
+    @strawberry.field(
+        description="""date when the membership ends""",
+        permission_classes=[OnlyForAuthentized()])
     async def enddate(self) -> Union[datetime.datetime, None]:
         return self.enddate
 
@@ -76,6 +86,27 @@ class MembershipInputWhereFilter:
     # from .groupGQLModel import GroupInputWhereFilter
     group: GroupInputWhereFilter
     user: UserInputWhereFilter
+
+from ._GraphResolvers import asPage
+
+@strawberry.field(
+    description="Retrieves memberships",
+    permission_classes=[OnlyForAuthentized(isList=True)])
+@asPage
+async def membership_page(
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: Optional[MembershipInputWhereFilter]= None
+    ) -> List[MembershipGQLModel]: 
+    return getLoader(info).memberships
+
+@strawberry.field(
+    description="Retrieves the membership",
+    permission_classes=[OnlyForAuthentized()])
+async def membership_by_id(
+    self, info: strawberry.types.Info, id: uuid.UUID
+) -> Optional[MembershipGQLModel]:
+    return await MembershipGQLModel.resolve_reference(info, id)
+
 
 #####################################################################
 #
@@ -111,7 +142,9 @@ class MembershipResultGQLModel:
         result = await MembershipGQLModel.resolve_reference(info, self.id)
         return result
     
-@strawberry.mutation(description="""Update the membership, cannot update group / user""")
+@strawberry.mutation(
+    description="""Update the membership, cannot update group / user""",
+    permission_classes=[OnlyForAuthentized()])
 async def membership_update(self, 
     info: strawberry.types.Info, 
     membership: "MembershipUpdateGQLModel"
@@ -127,7 +160,9 @@ async def membership_update(self,
     return result
 
 
-@strawberry.mutation(description="""Inserts new membership""")
+@strawberry.mutation(
+    description="""Inserts new membership""",
+    permission_classes=[OnlyForAuthentized()])
 async def membership_insert(self, 
     info: strawberry.types.Info, 
     membership: "MembershipInsertGQLModel"
