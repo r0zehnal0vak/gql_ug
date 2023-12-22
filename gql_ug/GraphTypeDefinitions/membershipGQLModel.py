@@ -15,7 +15,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
@@ -131,6 +133,7 @@ class MembershipUpdateGQLModel:
     valid: Optional[bool] = None
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class MembershipInsertGQLModel:
@@ -140,6 +143,7 @@ class MembershipInsertGQLModel:
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class MembershipResultGQLModel:
@@ -158,7 +162,8 @@ async def membership_update(self,
     info: strawberry.types.Info, 
     membership: "MembershipUpdateGQLModel"
 ) -> "MembershipResultGQLModel":
-
+    user = getUserFromInfo(info)
+    membership.changedby = user["id"]
     loader = getLoader(info).memberships
     updatedrow = await loader.update(membership)
 
@@ -176,7 +181,9 @@ async def membership_insert(self,
     info: strawberry.types.Info, 
     membership: "MembershipInsertGQLModel"
 ) -> "MembershipResultGQLModel":
-
+    user = getUserFromInfo(info)
+    membership.createdby = user["id"]
+    
     loader = getLoader(info).memberships
     row = await loader.insert(membership)
 

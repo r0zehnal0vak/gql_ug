@@ -1,6 +1,6 @@
 import typing
 from typing import List, Union, Optional
-import strawberry as strawberryA
+import strawberry
 import uuid
 import datetime
 
@@ -45,4 +45,5 @@ from .roleTypeGQLModel import RoleTypeGQLModel
 
 from .RBACObjectGQLModel import RBACObjectGQLModel
 from .BaseGQLModel import IDType
-schema = strawberryA.federation.Schema(query=Query, types=(RBACObjectGQLModel, IDType), mutation=Mutation)
+
+schema = strawberry.federation.Schema(query=Query, types=(RBACObjectGQLModel, IDType), mutation=Mutation)

@@ -55,6 +55,7 @@ test_membership_update = createUpdateQuery(
     membership {
       id
       lastchange
+      valid
     }
   }
 }""",

@@ -23,6 +23,7 @@ test_group_type_update = createUpdateQuery(tableName="grouptypes", query="""muta
     groupType {
       name
       lastchange
+      rbacobject { id }
     }
   }
 }""", variables={"id": "cd49e152-610c-11ed-9f29-001a7dda7110", "name": "newname"})

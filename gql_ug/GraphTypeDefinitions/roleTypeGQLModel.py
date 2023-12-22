@@ -15,7 +15,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
 
@@ -44,6 +46,14 @@ class RoleTypeGQLModel(BaseGQLModel):
         result = await loader.filter_by(roletype_id=self.id)
         return result
 
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.createdby is None else await RBACObjectGQLModel.resolve_reference(info, self.createdby)
+        return result    
 #####################################################################
 #
 # Special fields for query
@@ -93,6 +103,7 @@ class RoleTypeUpdateGQLModel:
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class RoleTypeInsertGQLModel:
@@ -100,6 +111,7 @@ class RoleTypeInsertGQLModel:
     id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     name_en: Optional[str] = None
+    createdby: strawberry.Private[uuid.UUID] = None
    
 
 @strawberry.type
@@ -121,6 +133,9 @@ async def role_type_update(self,
 
 ) -> RoleTypeResultGQLModel:
     print("role_type_update", role_type, flush=True)
+    user = getUserFromInfo(info)
+    role_type.changedby = user["id"]
+
     loader = getLoader(info).roletypes
     row = await loader.update(role_type)
     if row is not None:
@@ -140,6 +155,9 @@ async def role_type_insert(self,
 
 ) -> RoleTypeResultGQLModel:
     #print("role_type_update", role_type, flush=True)
+    user = getUserFromInfo(info)
+    role_type.createdby = user["id"]
+    
     loader = getLoader(info).roletypes
     row = await loader.insert(role_type)
     if row is not None:

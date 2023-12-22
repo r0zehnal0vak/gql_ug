@@ -23,6 +23,7 @@ test_role_type_update = createUpdateQuery(tableName="roletypes", query="""mutati
     roleType {
       name
       lastchange
+      rbacobject { id }
     }
   }
 }""", variables={"id": "05a3e0f5-f71e-4caa-8012-229d868aa8ca", "name": "newname"})

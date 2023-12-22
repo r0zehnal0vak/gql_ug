@@ -15,7 +15,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
@@ -78,6 +80,15 @@ class RoleGQLModel(BaseGQLModel):
         result = await gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, self.group_id)
         return result
     
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.createdby)
+        return result    
+        
 #####################################################################
 #
 # Special fields for query
@@ -191,6 +202,7 @@ class RoleUpdateGQLModel:
     valid: Optional[bool] = None
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class RoleInsertGQLModel:
@@ -201,6 +213,7 @@ class RoleInsertGQLModel:
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = datetime.datetime.now()
     enddate: Optional[datetime.datetime] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class RoleResultGQLModel:
@@ -220,6 +233,8 @@ async def role_update(self,
     info: strawberry.types.Info, 
     role: RoleUpdateGQLModel
 ) -> RoleResultGQLModel:
+    user = getUserFromInfo(info)
+    role.changedby = user["id"]
 
     loader = getLoader(info).roles
     updatedrow = await loader.update(role)
@@ -237,7 +252,9 @@ async def role_insert(self,
     info: strawberry.types.Info, 
     role: RoleInsertGQLModel
 ) -> RoleResultGQLModel:
-
+    user = getUserFromInfo(info)
+    role.createdby = user["id"]
+    
     loader = getLoader(info).roles
 
     result = RoleResultGQLModel()

@@ -1,5 +1,6 @@
 import logging
 from uoishelpers.dataloaders import createIdLoader, createFkeyLoader
+import uuid
 import datetime
 import aiohttp
 import asyncio
@@ -432,13 +433,14 @@ def getUserFromInfo(info):
     #print(list(context.keys()))
     result = context.get("user", None)
     if result is None:
-        authorization = context["request"].headers.get("Authorization", None)
-        if authorization is not None:
-            if 'Bearer ' in authorization:
-                token = authorization.split(' ')[1]
-                if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
-                    result = demouser
-                    context["user"] = result
+        request = context.get("request", None)
+        assert request is not None, context
+        result = request.scope["user"]
+
+    if result is None:
+        result = {"id": None}
+    else:
+        result = {**result, "id": uuid.UUID(result["id"])}
     logging.debug("getUserFromInfo", result)
     return result
 

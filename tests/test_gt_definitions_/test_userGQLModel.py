@@ -24,7 +24,7 @@ test_user_update = createUpdateQuery(tableName="users", query="""mutation ($id: 
     user {
       name
       lastchange
-      memberOf(grouptypeId: "cd49e157-610c-11ed-9312-001a7dda7110")
+      memberOf(grouptypeId: "cd49e157-610c-11ed-9312-001a7dda7110") { id }
     }
   }
 }""", variables={"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003", "name": "newname"})

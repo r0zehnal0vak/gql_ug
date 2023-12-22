@@ -22,4 +22,3 @@ class BaseGQLModel:
             return result
         return None
 
-

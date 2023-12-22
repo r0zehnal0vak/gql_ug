@@ -16,7 +16,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 def getUser(info):
     return info.context["user"]
@@ -25,9 +27,6 @@ def getUser(info):
 MembershipGQLModel = Annotated["MembershipGQLModel", strawberry.lazy(".membershipGQLModel")]
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
-
-
-from ..GraphPermissions import UserGDPRPermission
 
 @strawberry.federation.type(keys=["id"], description="""Entity representing a user""")
 class UserGQLModel(BaseGQLModel):
@@ -111,7 +110,7 @@ class UserGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
         from .RBACObjectGQLModel import RBACObjectGQLModel
-        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
+        result = None if self.id is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
         return result    
 
 #####################################################################
@@ -220,6 +219,7 @@ class UserUpdateGQLModel:
     surname: Optional[str] = None
     email: Optional[str] = None
     valid: Optional[bool] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class UserInsertGQLModel:
@@ -228,6 +228,7 @@ class UserInsertGQLModel:
     surname: Optional[str] = None
     email: Optional[str] = None
     valid: Optional[bool] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class UserResultGQLModel:
@@ -245,6 +246,8 @@ class UserResultGQLModel:
 async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLModel) -> UserResultGQLModel:
     #print("user_update", flush=True)
     #print(user, flush=True)
+    actinguser = getUserFromInfo(info)
+    user.changedby = actinguser["id"]
     loader = getLoader(info).users
     
     updatedrow = await loader.update(user)
@@ -260,6 +263,9 @@ async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLMode
     description="",
     permission_classes=[OnlyForAuthentized()])
 async def user_insert(self, info: strawberry.types.Info, user: UserInsertGQLModel) -> UserResultGQLModel:
+    actinguser = getUserFromInfo(info)
+    user.createdby = actinguser["id"]
+    
     loader = getLoader(info).users
     
     row = await loader.insert(user)

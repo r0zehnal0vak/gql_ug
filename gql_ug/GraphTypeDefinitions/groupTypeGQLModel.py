@@ -15,9 +15,12 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
+RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
 
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a group type (like Faculty)"""
@@ -45,6 +48,14 @@ class GroupTypeGQLModel(BaseGQLModel):
         loader = getLoader(info).groups
         result = await loader.filter_by(grouptype_id=self.id)
         return result
+
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.createdby is None else await RBACObjectGQLModel.resolve_reference(info, self.createdby)
+        return result    
 
 #####################################################################
 #
@@ -97,12 +108,14 @@ class GroupTypeUpdateGQLModel:
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class GroupTypeInsertGQLModel:
     id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     name_en: Optional[str] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class GroupTypeResultGQLModel:
@@ -118,6 +131,8 @@ class GroupTypeResultGQLModel:
     description="""Allows a update of group, also it allows to change the mastergroup of the group""",
     permission_classes=[OnlyForAuthentized()])
 async def group_type_update(self, info: strawberry.types.Info, group_type: GroupTypeUpdateGQLModel) -> GroupTypeResultGQLModel:
+    user = getUserFromInfo(info)
+    group_type.changedby = user["id"]
     loader = getLoader(info).grouptypes
     
     updatedrow = await loader.update(group_type)
@@ -131,6 +146,8 @@ async def group_type_update(self, info: strawberry.types.Info, group_type: Group
     description="""Inserts a group""",
     permission_classes=[OnlyForAuthentized()])
 async def group_type_insert(self, info: strawberry.types.Info, group_type: GroupTypeInsertGQLModel) -> GroupTypeResultGQLModel:
+    user = getUserFromInfo(info)
+    group_type.createdby = user["id"]
     loader = getLoader(info).grouptypes
     
     updatedrow = await loader.insert(group_type)

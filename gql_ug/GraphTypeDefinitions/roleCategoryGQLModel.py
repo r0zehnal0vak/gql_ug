@@ -14,7 +14,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 RoleTypeGQLModel = Annotated["RoleTypeGQLModel", strawberry.lazy(".roleTypeGQLModel")]
 
@@ -43,6 +45,14 @@ class RoleCategoryGQLModel(BaseGQLModel):
         rows = await loader.filter_by(category_id=self.id)
         return rows
     
+    RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+    @strawberry.field(
+        description="""""",
+        permission_classes=[OnlyForAuthentized()])
+    async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        result = None if self.createdby is None else await RBACObjectGQLModel.resolve_reference(info, self.createdby)
+        return result        
 #####################################################################
 #
 # Special fields for query
@@ -80,12 +90,14 @@ class RoleCategoryUpdateGQLModel:
     lastchange: datetime.datetime
     name: Optional[str] = None
     name_en: Optional[str] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input
 class RoleCategoryInsertGQLModel:
     id: Optional[uuid.UUID] = None
     name: Optional[str] = None
     name_en: Optional[str] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class RoleCategoryResultGQLModel:
@@ -105,6 +117,8 @@ async def role_category_update(self,
     role_category: RoleCategoryUpdateGQLModel
 
 ) -> RoleCategoryResultGQLModel:
+    user = getUserFromInfo(info)
+    role_category.changedby = user["id"]
 
     loader = getLoader(info).rolecategories
     row = await loader.update(role_category)
@@ -123,7 +137,9 @@ async def role_category_insert(self,
     role_category: RoleCategoryInsertGQLModel
 
 ) -> RoleCategoryResultGQLModel:
-
+    user = getUserFromInfo(info)
+    role_category.createdby = user["id"]
+    
     loader = getLoader(info).rolecategories
     row = await loader.insert(role_category)
 

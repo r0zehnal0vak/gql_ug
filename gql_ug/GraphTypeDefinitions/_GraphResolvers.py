@@ -221,56 +221,56 @@ def asForeignList(*, foreignKeyName: str):
     return decorator
 # def createAttributeScalarResolver(
 
-def createAttributeScalarResolver(
-    scalarType: None = None, 
-    foreignKeyName: str = None,
-    description="Retrieves item by its id",
-    permission_classes=()
-    ):
+# def createAttributeScalarResolver(
+#     scalarType: None = None, 
+#     foreignKeyName: str = None,
+#     description="Retrieves item by its id",
+#     permission_classes=()
+#     ):
 
-    assert scalarType is not None
-    assert foreignKeyName is not None
+#     assert scalarType is not None
+#     assert foreignKeyName is not None
 
-    @strawberry.field(description=description, permission_classes=permission_classes)
-    async def foreignkeyScalar(
-        self, info: strawberry.types.Info
-    ) -> typing.Optional[scalarType]:
-        # 👇 self must have an attribute, otherwise it is fail of definition
-        assert hasattr(self, foreignKeyName)
-        id = getattr(self, foreignKeyName, None)
+#     @strawberry.field(description=description, permission_classes=permission_classes)
+#     async def foreignkeyScalar(
+#         self, info: strawberry.types.Info
+#     ) -> typing.Optional[scalarType]:
+#         # 👇 self must have an attribute, otherwise it is fail of definition
+#         assert hasattr(self, foreignKeyName)
+#         id = getattr(self, foreignKeyName, None)
         
-        result = None if id is None else await scalarType.resolve_reference(info=info, id=id)
-        return result
-    return foreignkeyScalar
+#         result = None if id is None else await scalarType.resolve_reference(info=info, id=id)
+#         return result
+#     return foreignkeyScalar
 
-def createAttributeVectorResolver(
-    scalarType: None = None, 
-    whereFilterType: None = None,
-    foreignKeyName: str = None,
-    loaderLambda = lambda info: None, 
-    description="Retrieves items paged", 
-    skip: int=0, 
-    limit: int=10):
+# def createAttributeVectorResolver(
+#     scalarType: None = None, 
+#     whereFilterType: None = None,
+#     foreignKeyName: str = None,
+#     loaderLambda = lambda info: None, 
+#     description="Retrieves items paged", 
+#     skip: int=0, 
+#     limit: int=10):
 
-    assert scalarType is not None
-    assert foreignKeyName is not None
+#     assert scalarType is not None
+#     assert foreignKeyName is not None
 
-    @strawberry.field(description=description)
-    async def foreignkeyVector(
-        self, info: strawberry.types.Info,
-        skip: int = skip,
-        limit: int = limit,
-        where: typing.Optional[whereFilterType] = None
-    ) -> typing.List[scalarType]:
+#     @strawberry.field(description=description)
+#     async def foreignkeyVector(
+#         self, info: strawberry.types.Info,
+#         skip: int = skip,
+#         limit: int = limit,
+#         where: typing.Optional[whereFilterType] = None
+#     ) -> typing.List[scalarType]:
         
-        params = {foreignKeyName: self.id}
-        loader = loaderLambda(info)
-        assert loader is not None
+#         params = {foreignKeyName: self.id}
+#         loader = loaderLambda(info)
+#         assert loader is not None
         
-        wf = None if where is None else strawberry.asdict(where)
-        result = await loader.page(skip=skip, limit=limit, where=wf, extendedfilter=params)
-        return result
-    return foreignkeyVector
+#         wf = None if where is None else strawberry.asdict(where)
+#         result = await loader.page(skip=skip, limit=limit, where=wf, extendedfilter=params)
+#         return result
+#     return foreignkeyVector
 
 def createRootResolver_by_id(scalarType: None, description="Retrieves item by its id"):
     assert scalarType is not None
@@ -290,7 +290,7 @@ def createRootResolver_by_page(
     description="Retrieves items paged", 
     skip: int=0, 
     limit: int=10,
-    order_by: typing.Optional[str] = None,
+    orderby: typing.Optional[str] = None,
     desc: typing.Optional[bool] = None):
 
     assert scalarType is not None
@@ -300,11 +300,12 @@ def createRootResolver_by_page(
     permission_classes=[OnlyForAuthentized()])
     async def paged(
         self, info: strawberry.types.Info, 
-        skip: int=skip, limit: int=limit, where: typing.Optional[whereFilterType] = None
+        skip: int=skip, limit: int=limit, where: typing.Optional[whereFilterType] = None,
+        orderby: typing.Optional[str] = None
     ) -> typing.List[scalarType]:
         loader = loaderLambda(info)
         assert loader is not None
         wf = None if where is None else strawberry.asdict(where)
-        result = await loader.page(skip=skip, limit=limit, where=wf, orderby=order_by, desc=desc)
+        result = await loader.page(skip=skip, limit=limit, where=wf, orderby=orderby, desc=desc)
         return result
     return paged

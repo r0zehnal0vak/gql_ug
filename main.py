@@ -47,7 +47,7 @@ async def initEngine(app: FastAPI):
 
 
 from gql_ug.GraphTypeDefinitions import schema
-async def get_context():
+async def get_context(request: Request):
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
     if asyncSessionMaker is None:
         async with initEngine(app) as cntx:
@@ -55,6 +55,11 @@ async def get_context():
         
     from gql_ug.Dataloaders import createLoadersContext
     context = createLoadersContext(appcontext["asyncSessionMaker"])
+    result = {**context}
+    result["request"] = request
+    result["user"] = request.scope.get("user", None)
+    logging.info(f"context created {result}")
+
     return {**context}
 
 app = FastAPI(lifespan=initEngine)
@@ -102,14 +107,22 @@ async def graphiql(request: Request):
 import time
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
-    if not DEMO:
-        sentinelResult = await sentinel(request, item)
+    DEMOE = os.getenv("DEMO", None)
+
+    sentinelResult = await sentinel(request, item)
+
+    logging.info(f"asking sentinel for advice (is user authenticated?)")
+    if DEMOE == "False":
         if sentinelResult:
             return sentinelResult
         
     start = time.perf_counter()
     try:
-        context = await get_context()
+        context = await get_context(request)
+        if DEMOE == "True":
+            if context.get("user", None) is None:
+                context["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+                
         schemaresult = await schema.execute(item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
         # assert 1 == 0, ":)"
     except Exception as e:

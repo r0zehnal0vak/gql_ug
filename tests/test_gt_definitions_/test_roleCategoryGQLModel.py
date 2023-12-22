@@ -23,6 +23,7 @@ test_role_category_update = createUpdateQuery(tableName="rolecategories", query=
     roleCategory {
       name
       lastchange
+      rbacobject { id }
     }
   }
 }""", variables={"id": "fd73596b-1043-46f0-837a-baa0734d64df", "name": "newname"})

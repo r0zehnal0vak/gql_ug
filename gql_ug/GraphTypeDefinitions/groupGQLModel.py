@@ -14,7 +14,9 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from gql_ug.Dataloaders import (
+    getLoadersFromInfo as getLoader,
+    getUserFromInfo)
 
 GroupTypeGQLModel = Annotated["GroupTypeGQLModel", strawberry.lazy(".groupTypeGQLModel")]
 MembershipGQLModel = Annotated["MembershipGQLModel", strawberry.lazy(".membershipGQLModel")]
@@ -119,7 +121,7 @@ class GroupGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
         from .RBACObjectGQLModel import RBACObjectGQLModel
-        result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
+        result = None if self.id is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
         return result    
 
 #####################################################################
@@ -149,7 +151,7 @@ async def group_page(
 ) -> List[GroupGQLModel]:
     wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).groups
-    result = await loader.page(skip, limit, where=wheredict, orderby=order_by, desc=desc)
+    result = await loader.page(skip, limit, where=wheredict, orderby=orderby, desc=desc)
     return result
 
 @strawberry.field(
@@ -215,6 +217,7 @@ class GroupUpdateGQLModel:
     grouptype_id: Optional[uuid.UUID] = None
     mastergroup_id: Optional[uuid.UUID] = None
     valid: Optional[bool] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 
 @strawberry.input
@@ -225,6 +228,7 @@ class GroupInsertGQLModel:
     name_en: Optional[str] = None
     mastergroup_id: Optional[uuid.UUID] = None
     valid: Optional[bool] = None
+    createdby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type
 class GroupResultGQLModel:
@@ -242,6 +246,8 @@ class GroupResultGQLModel:
     description="""Allows a update of group, also it allows to change the mastergroup of the group""",
     permission_classes=[OnlyForAuthentized()])
 async def group_update(self, info: strawberry.types.Info, group: GroupUpdateGQLModel) -> GroupResultGQLModel:
+    user = getUserFromInfo(info)
+    group.changedby = user["id"]
     loader = getLoader(info).groups
     
     updatedrow = await loader.update(group)
@@ -254,6 +260,8 @@ async def group_update(self, info: strawberry.types.Info, group: GroupUpdateGQLM
     description="""Allows a update of group, also it allows to change the mastergroup of the group""",
     permission_classes=[OnlyForAuthentized()])
 async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLModel) -> GroupResultGQLModel:
+    user = getUserFromInfo(info)
+    group.createdby = user["id"]
     loader = getLoader(info).groups
     
     updatedrow = await loader.insert(group)
@@ -264,34 +272,37 @@ async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLM
         
     return result
 
-@strawberry.mutation(
-    description="""Allows to assign the group to8 specified master group""",
-    permission_classes=[OnlyForAuthentized()])
-async def group_update_master(self, 
-    info: strawberry.types.Info, 
-    master_id: IDType,
-    group: GroupUpdateGQLModel) -> GroupResultGQLModel:
-    loader = getLoader(info).groups
-    
-    result = GroupResultGQLModel()
-    result.id = group.id
-    result.msg = "ok"
+# @strawberry.mutation(
+#     description="""Allows to assign the group to8 specified master group""",
+#     permission_classes=[OnlyForAuthentized()])
+# async def group_update_master(self, 
+#     info: strawberry.types.Info, 
+#     master_id: IDType,
+#     group: GroupUpdateGQLModel) -> GroupResultGQLModel:
 
-    #use asyncio.gather here
-    updatedrow = await loader.load(group.id)
-    if updatedrow is None:
-        result.msg = "fail"
-        return result
-
-    masterrow = await loader.load(master_id)
-    if masterrow is None:
-        result.msg = "fail"
-        return result
-
-    updatedrow.master_id = master_id
-    updatedrow = await loader.update(updatedrow)
+#     user = getUserFromInfo(info)
+#     group.createdby = user["id"]
+#     loader = getLoader(info).groups
     
-    if updatedrow is None:
-        result.msg = "fail"
+#     result = GroupResultGQLModel()
+#     result.id = group.id
+#     result.msg = "ok"
+
+#     #use asyncio.gather here
+#     updatedrow = await loader.load(group.id)
+#     if updatedrow is None:
+#         result.msg = "fail"
+#         return result
+
+#     masterrow = await loader.load(master_id)
+#     if masterrow is None:
+#         result.msg = "fail"
+#         return result
+
+#     updatedrow.master_id = master_id
+#     updatedrow = await loader.update(updatedrow)
     
-    return result
+#     if updatedrow is None:
+#         result.msg = "fail"
+    
+#     return result
