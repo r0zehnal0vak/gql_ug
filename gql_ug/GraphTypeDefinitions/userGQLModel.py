@@ -67,8 +67,8 @@ class UserGQLModel(BaseGQLModel):
         return self.valid
 
     @strawberry.field(
-        description="""GDPRInfo for permision test""", permission_classes=[UserGDPRPermission],
-        permission_classes=[OnlyForAuthentized()])
+        description="""GDPRInfo for permision test""", 
+        permission_classes=[OnlyForAuthentized(), UserGDPRPermission])
     def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
         actinguser = getUser(info)
         print(actinguser)

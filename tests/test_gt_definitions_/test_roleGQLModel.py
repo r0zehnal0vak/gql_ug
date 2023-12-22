@@ -1,8 +1,15 @@
-from ..gqlshared import (
-    createByIdTest,
-    createPageTest,
-    createResolveReferenceTest,
-    createFrontendQuery,
+# from ..gqlshared import (
+#     createByIdTest,
+#     createPageTest,
+#     createResolveReferenceTest,
+#     createFrontendQuery,
+#     createUpdateQuery
+# )
+from .gt_utils import (
+    createByIdTest, 
+    createPageTest, 
+    createResolveReferenceTest, 
+    createFrontendQuery, 
     createUpdateQuery
 )
 
