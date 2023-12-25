@@ -1,7 +1,13 @@
 ## Execution
 
+### Basic functional tests
 ```bash
 pytest --cov-report term-missing --cov=gql_ug tests --log-cli-level=INFO -x
+```
+
+### Tests for integration
+```bash
+pytest tests/test_integration --log-cli-level=INFO -x
 ```
 
 ```bash
@@ -10,7 +16,7 @@ uvicorn main:app --env-file environment.txt --port 8000 --reload
 
 ```gql
 query {
-	userPage(where: {fullname: {_ilike: "%newbie%"}}, orderBy: "email", desc: true) {
+	userPage(where: {fullname: {_ilike: "%newbie%"}}, orderby: "email", desc: true) {
     id
     name
     email
