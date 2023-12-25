@@ -122,6 +122,15 @@ async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> Li
     return rows
 
 
+from ._GraphResolvers import asPage
+@strawberry.field(
+    description="",
+    permission_classes=[OnlyForAuthentized(isList=True)])
+@asPage
+async def role_page(self, info: strawberry.types.Info, where: Optional[RoleInputWhereFilter] = None) -> List["RoleGQLModel"]:
+    loader = getLoader(info).roles
+    return loader
+
 from gql_ug.DBDefinitions import (
     UserModel, MembershipModel, GroupModel, RoleModel
 )

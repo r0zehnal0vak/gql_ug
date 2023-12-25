@@ -131,6 +131,7 @@ user_by_id = createRootResolver_by_id(
 @createInputs
 @dataclass
 class UserInputWhereFilter:
+    id: uuid.UUID
     name: str
     surname: str
     email: str

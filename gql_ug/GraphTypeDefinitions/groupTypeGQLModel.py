@@ -68,22 +68,36 @@ from dataclasses import dataclass
 @createInputs
 @dataclass
 class GroupTypeInputWhereFilter:
+    id: uuid.UUID
     name: str
     valid: bool
     # from .membershipGQLModel import MembershipInputWhereFilter
     # memberships: MembershipInputWhereFilter
 
+# @strawberry.field(
+#     description="""Returns a list of groups types (paged)""",
+#     permission_classes=[OnlyForAuthentized(isList=True)])
+# async def group_type_page(
+#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 20,
+#     where: Optional[GroupTypeInputWhereFilter] = None
+# ) -> List[GroupTypeGQLModel]:
+#     wheredict = None if where is None else strawberry.asdict(where)
+#     loader = getLoader(info).grouptypes
+#     result = await loader.page(skip, limit, where=wheredict)
+#     return result
+
+from ._GraphResolvers import asPage
+
 @strawberry.field(
     description="""Returns a list of groups types (paged)""",
     permission_classes=[OnlyForAuthentized(isList=True)])
+@asPage
 async def group_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 20,
     where: Optional[GroupTypeInputWhereFilter] = None
 ) -> List[GroupTypeGQLModel]:
-    wheredict = None if where is None else strawberry.asdict(where)
     loader = getLoader(info).grouptypes
-    result = await loader.page(skip, limit, where=wheredict)
-    return result
+    return loader
 
 @strawberry.field(
     description="""Finds a group type by its id""",

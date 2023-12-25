@@ -65,6 +65,7 @@ from dataclasses import dataclass
 @createInputs
 @dataclass
 class RoleTypeInputWhereFilter:
+    id: uuid.UUID
     name: str
     from .roleGQLModel import RoleInputWhereFilter
     roles: RoleInputWhereFilter
@@ -78,18 +79,32 @@ async def role_type_by_id(
     result = await RoleTypeGQLModel.resolve_reference(info, id)
     return result
 
+# @strawberry.field(
+#     description="""Finds all roles types paged""",
+#     permission_classes=[OnlyForAuthentized(isList=True)])
+# async def role_type_page(
+#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+#     where: Optional[RoleTypeInputWhereFilter] = None
+# ) -> List[RoleTypeGQLModel]:
+#     wheredict = None if where is None else strawberry.asdict(where)
+#     # result = await resolveRoleTypeAll(session,  skip, limit)
+#     loader = getLoader(info).roletypes
+#     result = await loader.page(skip, limit, where=wheredict)
+#     return result
+    
+
+from ._GraphResolvers import asPage
+
 @strawberry.field(
     description="""Finds all roles types paged""",
     permission_classes=[OnlyForAuthentized(isList=True)])
+@asPage
 async def role_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: Optional[RoleTypeInputWhereFilter] = None
 ) -> List[RoleTypeGQLModel]:
-    wheredict = None if where is None else strawberry.asdict(where)
-    # result = await resolveRoleTypeAll(session,  skip, limit)
     loader = getLoader(info).roletypes
-    result = await loader.page(skip, limit, where=wheredict)
-    return result
+    return loader
     
 #####################################################################
 #

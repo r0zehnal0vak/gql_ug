@@ -135,6 +135,7 @@ from dataclasses import dataclass
 @createInputs
 @dataclass
 class GroupInputWhereFilter:
+    id: uuid.UUID
     name: str
     valid: bool
     from .membershipGQLModel import MembershipInputWhereFilter
