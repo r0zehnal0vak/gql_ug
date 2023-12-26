@@ -142,18 +142,18 @@ class UserInputWhereFilter:
 
 from ._GraphResolvers import createRootResolver_by_page, asPage
 
-user_page = createRootResolver_by_page(
-    scalarType=UserGQLModel,
-    whereFilterType=UserInputWhereFilter,
-    description="Returns a list of users (paged)",
-    loaderLambda=lambda info: getLoader(info).users
-)
+# user_page = createRootResolver_by_page(
+#     scalarType=UserGQLModel,
+#     whereFilterType=UserInputWhereFilter,
+#     description="Returns a list of users (paged)",
+#     loaderLambda=lambda info: getLoader(info).users
+# )
 
 @strawberry.field(
     description="returns list of users",
     permission_classes=[OnlyForAuthentized(isList=True)])
 @asPage
-async def user_page(self, info: strawberry.types.Info, where: UserInputWhereFilter = None) -> List[UserGQLModel]:
+async def user_page(self, info: strawberry.types.Info, where: Optional[UserInputWhereFilter] = None) -> List[UserGQLModel]:
     loader = getLoader(info).users
     return loader
 

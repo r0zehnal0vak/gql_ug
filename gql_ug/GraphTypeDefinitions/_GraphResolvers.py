@@ -82,7 +82,7 @@ def asPage(field, *, extendedfilter=None):
             skipParameterDefault = skipParameter.default
 
         limitParameter = signatureField.parameters.get("limit", None)
-        limitParameterDefault = 0
+        limitParameterDefault = 10
         if limitParameter:
             limitParameterDefault = limitParameter.default
 
