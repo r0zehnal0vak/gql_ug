@@ -39,5 +39,8 @@ query {
 - ROLELISTURL=http://localhost:8088/gql/
 - RBACURL=http://localhost:8088/gql
 
+## Syslog related variables
+- SYSLOGHOST=host.docker.internal:514
+
 ### 
 - DEMO=true
