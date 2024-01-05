@@ -199,6 +199,18 @@ async def user_by_letters(
     result = await loader.execute_select(stmt)
     return result
 
+
+async def me(self,
+    info: strawberry.types.Info) -> Optional[UserGQLModel]:
+    result = None
+    user = getUserFromInfo(info)
+    if user is None: return None
+    user_id = user.get("id", None)
+    if user_id is None: return None
+    user_id = uuid.UUID(user_id)
+    result = await UserGQLModel.resolve_reference(info, user_id)
+    return result
+
 # from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
 
 # @strawberry.field(description="""Finds users who plays in a group a roletype""")

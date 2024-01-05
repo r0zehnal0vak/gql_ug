@@ -3,14 +3,15 @@ import strawberry
 @strawberry.type(description="""Type for query root""")
 class Query:
 
-    from .userGQLModel import user_by_id
+    from .userGQLModel import (
+        user_by_id, 
+        user_page,
+        user_by_letters,
+        me)
     user_by_id = user_by_id
-
-    from .userGQLModel import user_page
     user_page = user_page
-
-    from .userGQLModel import user_by_letters
     user_by_letters = user_by_letters
+    me = me
 
     from .groupGQLModel import group_by_id
     group_by_id = group_by_id
