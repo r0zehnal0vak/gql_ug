@@ -199,7 +199,9 @@ async def user_by_letters(
     result = await loader.execute_select(stmt)
     return result
 
-
+@strawberry.field(
+    description="""This is logged user""",
+    permission_classes=[OnlyForAuthentized()])
 async def me(self,
     info: strawberry.types.Info) -> Optional[UserGQLModel]:
     result = None
