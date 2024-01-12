@@ -209,7 +209,7 @@ async def me(self,
     if user is None: return None
     user_id = user.get("id", None)
     if user_id is None: return None
-    user_id = uuid.UUID(user_id)
+    # user_id = uuid.UUID(user_id)
     result = await UserGQLModel.resolve_reference(info, user_id)
     return result
 
