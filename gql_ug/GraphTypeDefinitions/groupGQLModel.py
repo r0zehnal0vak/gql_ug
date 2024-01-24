@@ -21,6 +21,7 @@ from gql_ug.Dataloaders import (
 GroupTypeGQLModel = Annotated["GroupTypeGQLModel", strawberry.lazy(".groupTypeGQLModel")]
 MembershipGQLModel = Annotated["MembershipGQLModel", strawberry.lazy(".membershipGQLModel")]
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
+RoleInputWhereFilter = Annotated["RoleInputWhereFilter", strawberry.lazy(".roleGQLModel")]
 
 GroupGQLModel_description = """
 # Reason
@@ -109,7 +110,7 @@ class GroupGQLModel(BaseGQLModel):
     @strawberry.field(
         description="""List of roles in the group""",
         permission_classes=[OnlyForAuthentized(isList=True)])
-    async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
+    async def roles(self, info: strawberry.types.Info, where: Optional[RoleInputWhereFilter] = None) -> List["RoleGQLModel"]:
         # result = await resolveRolesForGroup(session,  self.id)
         loader = getLoader(info).roles
         result = await loader.filter_by(group_id=self.id)
