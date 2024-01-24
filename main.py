@@ -86,7 +86,7 @@ async def get_context(request: Request):
     result["user"] = request.scope.get("user", None)
     logging.info(f"context created {result}")
 
-    return {**context}
+    return {**result}
 
 app = FastAPI(lifespan=initEngine)
 
@@ -159,7 +159,12 @@ async def apollo_gql(request: Request, item: Item):
     
     result = {"data": schemaresult.data}
     if schemaresult.errors:
-        result["errors"] = [f"{error}" for error in schemaresult.errors]
+        print("schemaresult.errors", schemaresult.errors)
+        result["errors"] = [
+            {
+                "msg": f"{error}",
+                "source": f"{error}".split("\n"),
+            } for error in schemaresult.errors]
     return result
 
 # from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend

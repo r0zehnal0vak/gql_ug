@@ -445,8 +445,11 @@ def getUserFromInfo(info):
     return result
 
 def getLoadersFromInfo(info) -> Loaders:
+    # print("info", info)
     context = info.context
-    loaders = context["loaders"]
+    # print("context", context)
+    loaders = context.get("loaders", None)
+    assert loaders is not None, f"'loaders' key missing in context"
     return loaders
 
 def createLoadersContext(asyncSessionMaker):
