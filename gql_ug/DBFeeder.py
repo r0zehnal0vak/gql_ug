@@ -933,14 +933,7 @@ def get_demodata():
 async def initDB(asyncSessionMaker):
 
     demo = os.environ.get("DEMODATA", None)
-    if demo == "True":
-        dbModels = [
-            GroupTypeModel, 
-            RoleCategoryModel,
-            RoleTypeModel,
-        ]
-        
-    else:
+    if demo:
         dbModels = [
             GroupTypeModel, 
             RoleCategoryModel,
@@ -950,6 +943,14 @@ async def initDB(asyncSessionMaker):
             MembershipModel,
             RoleModel,
         ]        
+
+    else:
+        dbModels = [
+            GroupTypeModel, 
+            RoleCategoryModel,
+            RoleTypeModel,
+        ]
+        
 
     jsonData = get_demodata()
     await ImportModels(asyncSessionMaker, dbModels, jsonData)
