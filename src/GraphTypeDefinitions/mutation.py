@@ -55,7 +55,7 @@ class Mutation:
     # @strawberry.mutation()
     # async def createUniversity(self, info: strawberry.types.Info, name: typing.Optional[str] = "Uni") -> str:
     #     asyncMaker = info.context["asyncSessionMaker"]
-    #     from gql_ug.DBFeeder import randomDataStructure
+    #     from src.DBFeeder import randomDataStructure
     #     async with asyncMaker() as session:
     #         await randomDataStructure(session, name=name)
     #     return "ok"

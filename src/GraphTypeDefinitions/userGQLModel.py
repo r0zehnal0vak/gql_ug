@@ -3,7 +3,7 @@ import strawberry
 import asyncio
 import uuid
 from typing import List, Optional, Union, Annotated
-import gql_ug.GraphTypeDefinitions
+import src.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
@@ -16,7 +16,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
 
@@ -99,7 +99,7 @@ class UserGQLModel(BaseGQLModel):
     ) -> List["GroupGQLModel"]:
         loader = getLoader(info).memberships
         rows = await loader.filter_by(user_id=self.id)# , grouptype_id=grouptype_id)
-        results = (gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, row.group_id) for row in rows)
+        results = (src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, row.group_id) for row in rows)
         results = await asyncio.gather(*results)
         results = filter(lambda item: item.grouptype_id == grouptype_id, results)
         return results
@@ -213,7 +213,7 @@ async def me(self,
     result = await UserGQLModel.resolve_reference(info, user_id)
     return result
 
-# from gql_ug.GraphResolvers import UserByRoleTypeAndGroupStatement
+# from src.GraphResolvers import UserByRoleTypeAndGroupStatement
 
 # @strawberry.field(description="""Finds users who plays in a group a roletype""")
 # async def users_by_group_and_role_type(

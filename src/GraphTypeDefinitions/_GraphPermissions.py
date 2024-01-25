@@ -185,7 +185,7 @@ rolelist = [
 #     pass
 
 import requests
-from gql_ug.utils.gql_ug_proxy import createProxy
+from src.utils.gql_ug_proxy import createProxy
 
 def ReadAllRoles():
     GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
@@ -278,7 +278,7 @@ def RolesToList(roles: str = ""):
 #     return []
 
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getUserFromInfo
     )
 

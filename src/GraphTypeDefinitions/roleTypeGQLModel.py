@@ -2,7 +2,7 @@ import datetime
 import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
-import gql_ug.GraphTypeDefinitions
+import src.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
@@ -15,7 +15,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
 

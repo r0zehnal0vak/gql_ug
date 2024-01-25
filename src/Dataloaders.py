@@ -7,7 +7,7 @@ import asyncio
 import os
 from aiodataloader import DataLoader
 
-from gql_ug.DBDefinitions import (
+from src.DBDefinitions import (
     UserModel,
     MembershipModel,
     GroupModel,

@@ -8,11 +8,11 @@ import os
 os.environ.setdefault("DEMO", "True")
 
 # from ..uoishelpers.uuid import UUIDColumn
-from gql_ug.GraphTypeDefinitions import schema
+from src.GraphTypeDefinitions import schema
 
-from gql_ug.DBDefinitions import BaseModel
-from gql_ug.DBDefinitions import RoleTypeModel, RoleModel, RoleCategoryModel
-from gql_ug.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
+from src.DBDefinitions import BaseModel
+from src.DBDefinitions import RoleTypeModel, RoleModel, RoleCategoryModel
+from src.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
 
 
 async def prepare_in_memory_sqllite():
@@ -31,7 +31,7 @@ async def prepare_in_memory_sqllite():
 
     return async_session_maker
 
-from gql_ug.DBFeeder import get_demodata
+from src.DBFeeder import get_demodata
 
 async def prepare_demodata(async_session_maker):
     data = get_demodata()
@@ -53,7 +53,7 @@ async def prepare_demodata(async_session_maker):
     )
 
 
-from gql_ug.Dataloaders import createLoaders_3, createLoaders
+from src.Dataloaders import createLoaders_3, createLoaders
 
 
 def createContext(asyncSessionMaker):

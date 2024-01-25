@@ -4,9 +4,9 @@ import pytest
 
 # from ..uoishelpers.uuid import UUIDColumn
 
-from gql_ug.DBDefinitions import BaseModel
-from gql_ug.DBDefinitions import RoleTypeModel, RoleModel
-from gql_ug.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
+from src.DBDefinitions import BaseModel
+from src.DBDefinitions import RoleTypeModel, RoleModel
+from src.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
 
 from tests.shared import prepare_demodata, prepare_in_memory_sqllite, get_demodata
 
@@ -25,7 +25,7 @@ from tests.shared import prepare_demodata, prepare_in_memory_sqllite, get_demoda
 #         await randomDataStructure(session, "")
 
 
-# from gql_ug.DBFeeder import (
+# from src.DBFeeder import (
 #     createSystemDataStructureRoleTypes,
 #     createSystemDataStructureGroupTypes,
 # )

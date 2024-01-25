@@ -4,7 +4,7 @@ from typing import List, Optional, Union, Annotated
 import uuid
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
-import gql_ug.GraphTypeDefinitions
+import src.GraphTypeDefinitions
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -15,7 +15,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
 
@@ -61,7 +61,7 @@ class RoleGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def roletype(self, info: strawberry.types.Info) -> Optional[RoleTypeGQLModel]:
         # result = await resolveRoleTypeById(session,  self.roletype_id)
-        result = await gql_ug.GraphTypeDefinitions.RoleTypeGQLModel.resolve_reference(info, self.roletype_id)
+        result = await src.GraphTypeDefinitions.RoleTypeGQLModel.resolve_reference(info, self.roletype_id)
         return result
 
     @strawberry.field(
@@ -69,7 +69,7 @@ class RoleGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def user(self, info: strawberry.types.Info) -> Optional[UserGQLModel]:
         # result = await resolveUserById(session,  self.user_id)
-        result = await gql_ug.GraphTypeDefinitions.UserGQLModel.resolve_reference(info, self.user_id)
+        result = await src.GraphTypeDefinitions.UserGQLModel.resolve_reference(info, self.user_id)
         return result
 
     @strawberry.field(
@@ -77,7 +77,7 @@ class RoleGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def group(self, info: strawberry.types.Info) -> Optional[GroupGQLModel]:
         # result = await resolveGroupById(session,  self.group_id)
-        result = await gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, self.group_id)
+        result = await src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, self.group_id)
         return result
     
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
@@ -131,7 +131,7 @@ async def role_page(self, info: strawberry.types.Info, where: Optional[RoleInput
     loader = getLoader(info).roles
     return loader
 
-from gql_ug.DBDefinitions import (
+from src.DBDefinitions import (
     UserModel, MembershipModel, GroupModel, RoleModel
 )
 from sqlalchemy import select

@@ -2,11 +2,11 @@ import types
 
 import gql_ug
 
-GraphTypeDefinitions: types.ModuleType = gql_ug.GraphTypeDefinitions
-DBDefinitions: types.ModuleType = gql_ug.DBDefinitions
-Dataloaders: types.ModuleType = gql_ug.Dataloaders
-DBFeeder: types.ModuleType = gql_ug.DBFeeder
+GraphTypeDefinitions: types.ModuleType = src.GraphTypeDefinitions
+DBDefinitions: types.ModuleType = src.DBDefinitions
+Dataloaders: types.ModuleType = src.Dataloaders
+DBFeeder: types.ModuleType = src.DBFeeder
 
 # schema = GraphTypeDefinitions.schema
 
-from gql_ug.GraphTypeDefinitions import schema
+from src.GraphTypeDefinitions import schema

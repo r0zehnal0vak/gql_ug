@@ -1,31 +1,25 @@
-import logging
 import os
+import strawberry
+import socket
+
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from strawberry.fastapi import GraphQLRouter
-from contextlib import asynccontextmanager
-
-from gql_ug.DBDefinitions import startEngine, ComposeConnectionString
-
-# import socket
-# import logging
-# import logging.config
-# import logging.handlers
-# import yaml
-# logging.socket = socket
-# with open('./logging.yaml', 'r') as stream:
-#     # Converts yaml document to python object
-#     config = yaml.safe_load(stream)
-#     print(config)
-#     logging.config.dictConfig(config)
-# logging.config.d("./logging.yaml", disable_existing_loggers=False)
-
-
+from strawberry.asgi import GraphQL
 
 import logging
 import logging.handlers
-import socket
+
+from src.GraphTypeDefinitions import schema
+from src.DBDefinitions import startEngine, ComposeConnectionString
+from src.DBFeeder import initDB
+from uoishelpers.authenticationMiddleware import createAuthentizationSentinel
+
+# region logging setup
+
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
@@ -42,84 +36,113 @@ if SYSLOGHOST is not None:
     my_logger.addHandler(handler)
 
 
+# endregion
+
+# region DB setup
+
+## Definice GraphQL typu (pomoci strawberry https://strawberry.rocks/)
+## Strawberry zvoleno kvuli moznosti mit federovane GraphQL API (https://strawberry.rocks/docs/guides/federation, https://www.apollographql.com/docs/federation/)
+## Definice DB typu (pomoci SQLAlchemy https://www.sqlalchemy.org/)
+## SQLAlchemy zvoleno kvuli moznost komunikovat s DB asynchronne
+## https://docs.sqlalchemy.org/en/14/core/future.html?highlight=select#sqlalchemy.future.select
+
+
 ## Zabezpecuje prvotni inicializaci DB a definovani Nahodne struktury pro "Univerzity"
-from gql_ug.DBFeeder import initDB
+# from gql_workflow.DBFeeder import createSystemDataStructureRoleTypes, createSystemDataStructureGroupTypes
 
 connectionString = ComposeConnectionString()
 
-appcontext = {}
-@asynccontextmanager
-async def initEngine(app: FastAPI):
+def singleCall(asyncFunc):
+    """Dekorator, ktery dovoli, aby dekorovana funkce byla volana (vycislena) jen jednou. Navratova hodnota je zapamatovana a pri dalsich volanich vracena.
+    Dekorovana funkce je asynchronni.
+    """
+    resultCache = {}
 
-    from gql_ug.DBDefinitions import startEngine, ComposeConnectionString
+    async def result():
+        if resultCache.get("result", None) is None:
+            resultCache["result"] = await asyncFunc()
+        return resultCache["result"]
 
-    connectionstring = ComposeConnectionString()
+    return result
 
-    asyncSessionMaker = await startEngine(
-        connectionstring=connectionstring,
-        makeDrop=True,
-        makeUp=True
+@singleCall
+async def RunOnceAndReturnSessionMaker():
+    """Provadi inicializaci asynchronniho db engine, inicializaci databaze a vraci asynchronni SessionMaker.
+    Protoze je dekorovana, volani teto funkce se provede jen jednou a vystup se zapamatuje a vraci se pri dalsich volanich.
+    """
+
+    makeDrop = os.getenv("DEMO", None) == "True"
+    logging.info(f'starting engine for "{connectionString} makeDrop={makeDrop}"')
+
+    result = await startEngine(
+        connectionstring=connectionString, makeDrop=makeDrop, makeUp=True
     )
 
-    appcontext["asyncSessionMaker"] = asyncSessionMaker
+    logging.info(f"initializing system structures")
 
-    logging.info("engine started")
+    ###########################################################################################################################
+    #
+    # zde definujte do funkce asyncio.gather
+    # vlozte asynchronni funkce, ktere maji data uvest do prvotniho konzistentniho stavu
+    await initDB(result)
+    #
+    #
+    ###########################################################################################################################
+    logging.info(f"all done")
+    return result
 
-    from gql_ug.DBFeeder import initDB
-    await initDB(asyncSessionMaker)
+# endregion
 
-    logging.info("data (if any) imported")
-    yield
+# region Sentinel setup
+JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", "http://localhost:8000/oauth/publickey")
+JWTRESOLVEUSERPATHURL = os.environ.get("JWTRESOLVEUSERPATHURL", "http://localhost:8000/oauth/userinfo")
+
+apolloQuery = "query __ApolloGetServiceDefinition__ { _service { sdl } }"
+graphiQLQuery = "\n    query IntrospectionQuery {\n      __schema {\n        \n        queryType { name }\n        mutationType { name }\n        subscriptionType { name }\n        types {\n          ...FullType\n        }\n        directives {\n          name\n          description\n          \n          locations\n          args(includeDeprecated: true) {\n            ...InputValue\n          }\n        }\n      }\n    }\n\n    fragment FullType on __Type {\n      kind\n      name\n      description\n      \n      fields(includeDeprecated: true) {\n        name\n        description\n        args(includeDeprecated: true) {\n          ...InputValue\n        }\n        type {\n          ...TypeRef\n        }\n        isDeprecated\n        deprecationReason\n      }\n      inputFields(includeDeprecated: true) {\n        ...InputValue\n      }\n      interfaces {\n        ...TypeRef\n      }\n      enumValues(includeDeprecated: true) {\n        name\n        description\n        isDeprecated\n        deprecationReason\n      }\n      possibleTypes {\n        ...TypeRef\n      }\n    }\n\n    fragment InputValue on __InputValue {\n      name\n      description\n      type { ...TypeRef }\n      defaultValue\n      isDeprecated\n      deprecationReason\n    }\n\n    fragment TypeRef on __Type {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n                ofType {\n                  kind\n                  name\n                  ofType {\n                    kind\n                    name\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  "
 
 
-from gql_ug.GraphTypeDefinitions import schema
+sentinel = createAuthentizationSentinel(
+    JWTPUBLICKEY=JWTPUBLICKEYURL,
+    JWTRESOLVEUSERPATH=JWTRESOLVEUSERPATHURL,
+    queriesWOAuthentization=[apolloQuery, graphiQLQuery],
+    onAuthenticationError=lambda item: JSONResponse({"data": None, "errors": ["Unauthenticated", item.query, f"{item.variables}"]}, 
+    status_code=401))
+
+# endregion
+
+# region FastAPI setup
+class Item(BaseModel):
+    query: str
+    variables: dict = {}
+    operationName: str = None
+
 async def get_context(request: Request):
-    asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
-    if asyncSessionMaker is None:
-        async with initEngine(app) as cntx:
-            pass
+    asyncSessionMaker = await RunOnceAndReturnSessionMaker()
         
-    from gql_ug.Dataloaders import createLoadersContext
-    context = createLoadersContext(appcontext["asyncSessionMaker"])
+    #from src.Dataloaders import createLoadersContext, createUgConnectionContext
+    from src.Dataloaders import createLoadersContext
+    context = createLoadersContext(asyncSessionMaker)
+    i = Item(query = "")
+    # i.query = ""
+    # i.variables = {}
+    logging.info(f"before sentinel current user is {request.scope.get('user', None)}")
+    await sentinel(request, i)
+    logging.info(f"after sentinel current user is {request.scope.get('user', None)}")
+    # connectionContext = createUgConnectionContext(request=request)
+    # result = {**context, **connectionContext}
     result = {**context}
     result["request"] = request
     result["user"] = request.scope.get("user", None)
     logging.info(f"context created {result}")
+    return result
 
-    return {**result}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initizalizedEngine = await RunOnceAndReturnSessionMaker()
+    yield
 
-app = FastAPI(lifespan=initEngine)
-
-from doc import attachVoyager
-attachVoyager(app, path="/gql/doc")
-
-
-print("All initialization is done")
-@app.get('/hello')
-def hello(request: Request):
-    headers = request.headers
-    auth = request.auth
-    user = request.scope["user"]
-    return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
-
-JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", "http://localhost:8000/oauth/publickey")
-JWTRESOLVEUSERPATHURL = os.environ.get("JWTRESOLVEUSERPATHURL", "http://localhost:8000/oauth/userinfo")
-
-class Item(BaseModel):
-    query: str
-    variables: dict = None
-    operationName: str = None
-
-apolloQuery = "query __ApolloGetServiceDefinition__ { _service { sdl } }"
-graphiQLQuery = "\n    query IntrospectionQuery {\n      __schema {\n        \n        queryType { name }\n        mutationType { name }\n        subscriptionType { name }\n        types {\n          ...FullType\n        }\n        directives {\n          name\n          description\n          \n          locations\n          args(includeDeprecated: true) {\n            ...InputValue\n          }\n        }\n      }\n    }\n\n    fragment FullType on __Type {\n      kind\n      name\n      description\n      \n      fields(includeDeprecated: true) {\n        name\n        description\n        args(includeDeprecated: true) {\n          ...InputValue\n        }\n        type {\n          ...TypeRef\n        }\n        isDeprecated\n        deprecationReason\n      }\n      inputFields(includeDeprecated: true) {\n        ...InputValue\n      }\n      interfaces {\n        ...TypeRef\n      }\n      enumValues(includeDeprecated: true) {\n        name\n        description\n        isDeprecated\n        deprecationReason\n      }\n      possibleTypes {\n        ...TypeRef\n      }\n    }\n\n    fragment InputValue on __InputValue {\n      name\n      description\n      type { ...TypeRef }\n      defaultValue\n      isDeprecated\n      deprecationReason\n    }\n\n    fragment TypeRef on __Type {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n                ofType {\n                  kind\n                  name\n                  ofType {\n                    kind\n                    name\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  "
-roleTypeQuery = "{roleTypePage(limit: 1000) {id, name, nameEn}}"
-from uoishelpers.authenticationMiddleware import createAuthentizationSentinel
-sentinel = createAuthentizationSentinel(
-    JWTPUBLICKEY=JWTPUBLICKEYURL,
-    JWTRESOLVEUSERPATH=JWTRESOLVEUSERPATHURL,
-    queriesWOAuthentization=[apolloQuery, graphiQLQuery, roleTypeQuery],
-    onAuthenticationError=lambda item: JSONResponse({"data": None, "errors": ["Unauthenticated", item.query, f"{item.variables}"]}, 
-    status_code=401))
+app = FastAPI(lifespan=lifespan)
+# app.mount("/gql", graphql_app)
 
 graphql_app = GraphQLRouter(
     schema,
@@ -130,52 +153,56 @@ graphql_app = GraphQLRouter(
 async def graphiql(request: Request):
     return await graphql_app.render_graphql_ide(request)
 
-import time
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
     DEMOE = os.getenv("DEMO", None)
 
     sentinelResult = await sentinel(request, item)
-
-    logging.info(f"asking sentinel for advice (is user authenticated?)")
     if DEMOE == "False":
         if sentinelResult:
+            logging.info(f"sentinel test failed for query={item} \n request={request}")
+            print(f"sentinel test failed for query={item} \n request={request}")
             return sentinelResult
-        
-    start = time.perf_counter()
+        logging.info(f"sentinel test passed for query={item} for user {request.scope.get('user', None)}")
+    else:
+        request.scope["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+        logging.info(f"sentinel skippend because of DEMO mode for query={item} for user {request.scope['user']}")
     try:
         context = await get_context(request)
-        if DEMOE == "True":
-            if context.get("user", None) is None:
-                context["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
-                
-        schemaresult = await schema.execute(item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
-        # assert 1 == 0, ":)"
+        schemaresult = await schema.execute(query=item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
     except Exception as e:
-        return {"data": None, "errors": [f"{type(e).__name__}: {e}"]}
+        logging.info(f"error during schema execute {e}")
+        return {"data": None, "errors": [{f"{type(e).__name__}": "{e}"}]}
     
-    duration = time.perf_counter() - start
-    print(f"query duration {duration/1000} ms" )
-    
+    # logging.info(f"schema execute result \n{schemaresult}")
     result = {"data": schemaresult.data}
     if schemaresult.errors:
-        print("schemaresult.errors", schemaresult.errors)
-        result["errors"] = [
-            {
-                "msg": f"{error}",
-                "source": f"{error}".split("\n"),
-            } for error in schemaresult.errors]
+        result["errors"] = [{"msg": f"{error}"} for error in schemaresult.errors]
     return result
 
-# from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend
-# app.add_middleware(BasicAuthenticationMiddleware302, backend=BasicAuthBackend(
-#         JWTPUBLICKEY = JWTPUBLICKEY,
-#         JWTRESOLVEUSERPATH = JWTRESOLVEUSERPATH
-# ))
+logging.info("All initialization is done")
 
-import os
-DEMO = os.getenv("DEMO", None)
-assert DEMO is not None, "DEMO environment variable must be explicitly defined"
+# @app.get('/hello')
+# def hello():
+#    return {'hello': 'world'}
+
+###########################################################################################################################
+#
+# pokud jste pripraveni testovat GQL funkcionalitu, rozsirte apollo/server.js
+#
+###########################################################################################################################
+# endregion
+
+# region ENV setup tests
+def envAssertDefined(name, default=None):
+    result = os.getenv(name, None)
+    assert result is not None, f"{name} environment variable must be explicitly defined"
+    return result
+
+DEMO = envAssertDefined("DEMO", None)
+JWTPUBLICKEYURL = envAssertDefined("JWTPUBLICKEYURL", None)
+JWTRESOLVEUSERPATHURL = envAssertDefined("JWTRESOLVEUSERPATHURL", None)
+
 assert (DEMO == "True") or (DEMO == "False"), "DEMO environment variable can have only `True` or `False` values"
 DEMO = DEMO == "True"
 
@@ -191,4 +218,21 @@ if DEMO:
     logging.info("# RUNNING IN DEMO                                  #")
     logging.info("#                                                  #")
     logging.info("####################################################")
+else:
+    print("####################################################")
+    print("#                                                  #")
+    print("# RUNNING DEPLOYMENT                               #")
+    print("#                                                  #")
+    print("####################################################")
 
+    logging.info("####################################################")
+    logging.info("#                                                  #")
+    logging.info("# RUNNING DEPLOYMENT                               #")
+    logging.info("#                                                  #")
+    logging.info("####################################################")    
+
+logging.info(f"DEMO = {DEMO}")
+logging.info(f"SYSLOGHOST = {SYSLOGHOST}")
+logging.info(f"JWTPUBLICKEYURL = {JWTPUBLICKEYURL}")
+logging.info(f"JWTRESOLVEUSERPATHURL = {JWTRESOLVEUSERPATHURL}")
+# endregion

@@ -1,5 +1,5 @@
 from functools import cache
-from gql_ug.DBDefinitions import (
+from src.DBDefinitions import (
     GroupTypeModel, 
     RoleTypeModel,
     RoleCategoryModel,
@@ -806,7 +806,7 @@ from sqlalchemy.future import select
 #     return university["id"]
 
 
-# from gql_ug.GraphResolvers import (
+# from src.GraphResolvers import (
 #     resolveGroupById,
 #     resolveUserById,
 #     resolveMembershipById,

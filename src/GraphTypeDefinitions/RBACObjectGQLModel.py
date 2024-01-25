@@ -5,7 +5,7 @@ from typing import List, Annotated, Optional
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphResolvers import resolve_id
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
-from gql_ug.Dataloaders import getLoadersFromInfo as getLoader
+from src.Dataloaders import getLoadersFromInfo as getLoader
 
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
 

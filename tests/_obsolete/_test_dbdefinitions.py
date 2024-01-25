@@ -4,9 +4,9 @@ import pytest
 
 # from ..uoishelpers.uuid import UUIDColumn
 
-from gql_ug.DBDefinitions import BaseModel
-from gql_ug.DBDefinitions import RoleTypeModel, RoleModel
-from gql_ug.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
+from src.DBDefinitions import BaseModel
+from src.DBDefinitions import RoleTypeModel, RoleModel
+from src.DBDefinitions import UserModel, GroupModel, GroupTypeModel, MembershipModel
 
 from tests.shared import prepare_demodata, prepare_in_memory_sqllite, get_demodata
 
@@ -32,7 +32,7 @@ async def test_table_users_feed():
         assert dr == rr
 
 
-from gql_ug.DBDefinitions import ComposeConnectionString
+from src.DBDefinitions import ComposeConnectionString
 
 
 def test_connection_string():
@@ -42,7 +42,7 @@ def test_connection_string():
     #assert "@" in connectionString
 
 
-from gql_ug.DBDefinitions import UUIDColumn
+from src.DBDefinitions import UUIDColumn
 
 
 def test_connection_uuidcolumn():
@@ -51,7 +51,7 @@ def test_connection_uuidcolumn():
     assert col is not None
 
 
-from gql_ug.DBDefinitions import startEngine
+from src.DBDefinitions import startEngine
 
 
 @pytest.mark.asyncio

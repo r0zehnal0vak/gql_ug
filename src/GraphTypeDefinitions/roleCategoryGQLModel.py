@@ -14,7 +14,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
 

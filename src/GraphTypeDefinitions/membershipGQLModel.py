@@ -2,7 +2,7 @@ import datetime
 import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
-import gql_ug.GraphTypeDefinitions
+import src.GraphTypeDefinitions
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from ._GraphResolvers import (
@@ -15,7 +15,7 @@ from ._GraphResolvers import (
     resolve_createdby
 )
 
-from gql_ug.Dataloaders import (
+from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
 
@@ -42,7 +42,7 @@ class MembershipGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def user(self, info: strawberry.types.Info) -> Optional["UserGQLModel"]:
         # return self.user
-        result = await gql_ug.GraphTypeDefinitions.UserGQLModel.resolve_reference(info=info, id=self.user_id)
+        result = await src.GraphTypeDefinitions.UserGQLModel.resolve_reference(info=info, id=self.user_id)
         return result
 
     @strawberry.field(
@@ -50,7 +50,7 @@ class MembershipGQLModel(BaseGQLModel):
         permission_classes=[OnlyForAuthentized()])
     async def group(self, info: strawberry.types.Info) -> Optional["GroupGQLModel"]:
         # return self.group
-        result = await gql_ug.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info=info, id=self.group_id)
+        result = await src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info=info, id=self.group_id)
         return result
 
     @strawberry.field(

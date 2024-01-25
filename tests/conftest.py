@@ -18,7 +18,7 @@ serversTestscope = "function"
 
 @pytest.fixture
 def DBModels():
-    from gql_ug.DBDefinitions import (
+    from src.DBDefinitions import (
         UserModel,
         GroupModel,
         GroupTypeModel,
@@ -42,7 +42,7 @@ def DBModels():
         RoleTypeListModel
         ]
 
-from gql_ug.DBFeeder import get_demodata
+from src.DBFeeder import get_demodata
 @pytest.fixture(scope=serversTestscope)
 def DemoData():
     return get_demodata()
@@ -53,7 +53,7 @@ async def Async_Session_Maker(DBModels):
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
-    from gql_ug.DBDefinitions import BaseModel
+    from src.DBDefinitions import BaseModel
     asyncEngine = create_async_engine("sqlite+aiosqlite:///:memory:")
     # asyncEngine = create_async_engine("sqlite+aiosqlite:///data.sqlite")
     async with asyncEngine.begin() as conn:
@@ -81,7 +81,7 @@ async def SQLite(Async_Session_Maker, DemoData, DBModels):
 
 @pytest.fixture
 def LoadersContext(SQLite):
-    from gql_ug.Dataloaders import createLoadersContext
+    from src.Dataloaders import createLoadersContext
     context = createLoadersContext(SQLite)
     return context
 
@@ -99,7 +99,7 @@ def Request(AuthorizationHeaders):
 
 @pytest.fixture
 def Context(AdminUser, SQLite, LoadersContext, Request):
-    from gql_ug.utils.gql_ug_proxy import get_ug_connection
+    from src.utils.gql_ug_proxy import get_ug_connection
     
     Async_Session_Maker = SQLite
     return {
@@ -183,7 +183,7 @@ def DemoFalse(monkeypatch):
 
 @pytest.fixture
 def SchemaExecutor(SQLite, Info):
-    from gql_ug.GraphTypeDefinitions import schema
+    from src.GraphTypeDefinitions import schema
     async def Execute(query, variable_values={}):
         result = await schema.execute(query=query, variable_values=variable_values, context_value=Info.context)
         value = {"data": result.data} 
@@ -445,11 +445,11 @@ async def AuthorizationHeaders(AccessToken):
 @pytest.fixture
 def FastAPIClient(SQLite):
     from fastapi.testclient import TestClient
-    import gql_ug.DBDefinitions
+    import src.DBDefinitions
 
     def ComposeCString():
         return "sqlite+aiosqlite:///:memory:"   
-    gql_ug.DBDefinitions.ComposeConnectionString = ComposeCString
+    src.DBDefinitions.ComposeConnectionString = ComposeCString
 
     import main
     client = TestClient(main.app, raise_server_exceptions=False)   
@@ -458,11 +458,11 @@ def FastAPIClient(SQLite):
 @pytest.fixture
 def FastAPIClient2():
     from fastapi.testclient import TestClient
-    import gql_ug.DBDefinitions
+    import src.DBDefinitions
 
     def ComposeCString():
         return "sqlite+aiosqlite:///:memory:"   
-    gql_ug.DBDefinitions.ComposeConnectionString = ComposeCString
+    src.DBDefinitions.ComposeConnectionString = ComposeCString
 
     import main
     client = TestClient(main.app, raise_server_exceptions=False)   
@@ -484,11 +484,11 @@ def FastAPIClient2():
 @pytest.fixture
 def FastAPIClient3():
     from fastapi.testclient import TestClient
-    import gql_ug.DBDefinitions
+    import src.DBDefinitions
 
     def ComposeCString():
         return "sqlite+aiosqlite:///:memory:"   
-    gql_ug.DBDefinitions.ComposeConnectionString = ComposeCString
+    src.DBDefinitions.ComposeConnectionString = ComposeCString
 
     import main
     client = TestClient(main.app, raise_server_exceptions=False)   
