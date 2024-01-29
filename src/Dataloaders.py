@@ -461,7 +461,7 @@ def getUserFromInfo(info):
     # logging.debug("getUserFromInfo", result)
     return result
 
-def getLoadersFromInfo(info) -> Loaders:
+def getLoadersFromInfo(info):
     # print("info", info)
     context = info.context
     # print("context", context)

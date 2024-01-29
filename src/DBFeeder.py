@@ -1,7 +1,8 @@
 from functools import cache
 from src.DBDefinitions import (
     BaseModel,
-    systemModels
+    systemModels,
+    allModels
     # GroupTypeModel, 
     # RoleTypeModel,
     # RoleCategoryModel,
@@ -936,7 +937,8 @@ async def initDB(asyncSessionMaker):
 
     demo = os.environ.get("DEMODATA", None)
     if demo:
-        dbModels = [DBModel for DBModel in BaseModel.registry.mappers]
+        dbModels = allModels
+        
     else:
         dbModels = systemModels
        
