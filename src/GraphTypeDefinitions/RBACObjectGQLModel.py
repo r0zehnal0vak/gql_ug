@@ -3,6 +3,8 @@ import uuid
 import asyncio
 from typing import List, Annotated, Optional
 from .BaseGQLModel import BaseGQLModel, IDType
+from uoishelpers.resolvers import createInputs
+
 from ._GraphResolvers import resolve_id
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from src.Dataloaders import getLoadersFromInfo as getLoader
@@ -16,15 +18,38 @@ class RBACObjectGQLModel:
     id = resolve_id
     asUser: strawberry.Private[bool] = False
     asGroup: strawberry.Private[bool] = False
+    
+    @classmethod
+    async def resolve_roles(info: strawberry.types.Info, id: IDType):
+        from .roleGQLModel import resolve_roles_on_user, resolve_roles_on_group
+        from ._GraphPermissions import RBACPermission
+        awaitableresult0 = resolve_roles_on_user(None, info, user_id=id)
+        awaitableresult1 = resolve_roles_on_group(None, info, group_id=id)
+        result0, result1 = await asyncio.gather(awaitableresult0, awaitableresult1)
+        roles = [*result0, *result1]
+        allRoleTypes = RBACPermission.getAllRoles()
+        index = {roleType["id"]: roleType for roleType in allRoleTypes}
+        extresult = [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "group_id": r.group_id,
+                "roletype_id": r.roletype_id,
+                "type": index[r.roletype_id]
+            } for r in roles
+        ]
+        return extresult
 
     @classmethod
     async def resolve_reference(cls, info: strawberry.types.Info, id: IDType):
+        from .groupGQLModel import GroupGQLModel
+        from .userGQLModel import UserGQLModel
         if id is None: return None
                 
-        if isinstance(id, str): id = uuid.UUID(id)
+        if isinstance(id, str): id = IDType(id)
 
-        loaderU = getLoader(info).users
-        loaderG = getLoader(info).groups
+        loaderU = UserGQLModel.getLoader(info)
+        loaderG = GroupGQLModel.getLoader(info)
         futures = [loaderU.load(id), loaderG.load(id)]
         rows = await asyncio.gather(*futures)
 
@@ -39,7 +64,7 @@ class RBACObjectGQLModel:
 
     @strawberry.field(
         description="Roles associated with this RBAC",
-        permission_classes=[OnlyForAuthentized(isList=True)])
+        permission_classes=[OnlyForAuthentized])
     async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
         from .roleGQLModel import resolve_roles_on_user, resolve_roles_on_group
         result = []
@@ -51,7 +76,7 @@ class RBACObjectGQLModel:
     
 @strawberry.field(
     description="""Finds a rbasobject by its id""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def rbac_by_id(
     self, info: strawberry.types.Info, id: IDType
 ) -> Optional["RBACObjectGQLModel"]:

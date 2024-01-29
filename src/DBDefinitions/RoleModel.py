@@ -34,3 +34,5 @@ class RoleModel(BaseModel):
     roletype = relationship("RoleTypeModel", back_populates="roles")
     user = relationship("UserModel", back_populates="roles", foreign_keys=[user_id])
     group = relationship("GroupModel", back_populates="roles")
+
+    rbacobject = UUIDFKey(nullable=True, comment="holds object for role resolution")#Column(ForeignKey("users.id"), index=True, nullable=True)    

@@ -7,21 +7,40 @@ from .UserModel import UserModel
 from .MembershipModel import MembershipModel
 from .GroupModel import GroupModel
 from .GroupTypeModel import GroupTypeModel
+from .GroupCategoryModel import GroupCategoryModel
 from .RoleModel import RoleModel
 from .RoleTypeModel import RoleTypeModel
 from .RoleCategoryModel import RoleCategoryModel
 from .RoleTypeListModel import RoleTypeListModel
 
 
+systemModels = [
+    RoleCategoryModel,
+    RoleTypeModel,
+    GroupCategoryModel,
+    GroupTypeModel
+]
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
-async def startEngine(connectionstring, makeDrop=False, makeUp=True):
+dbInitIsDone = False
+
+def startSyncEngine(connectionString=None) -> Session:
+    if connectionString is None:
+        connectionString = ComposeConnectionString()
+    syncEngine = create_engine(connectionString)
+    sessionMaker = sessionmaker(syncEngine, expire_on_commit=False)
+    assert dbInitIsDone == True, "Seems DB has not been initialized"
+    return sessionMaker
+
+
+async def startEngine(connectionstring, makeDrop=False, makeUp=True) -> AsyncSession:
+    global dbInitIsDone
     """Provede nezbytne ukony a vrati asynchronni SessionMaker"""
     asyncEngine = create_async_engine(connectionstring, pool_pre_ping=True)
     # pool_size=20, max_overflow=10, pool_recycle=60) #pool_pre_ping=True, pool_recycle=3600
@@ -38,6 +57,7 @@ async def startEngine(connectionstring, makeDrop=False, makeUp=True):
                 print(e)
                 print("Unable automaticaly create tables")
                 return None
+    dbInitIsDone = False
 
     async_sessionMaker = sessionmaker(
         asyncEngine, expire_on_commit=False, class_=AsyncSession

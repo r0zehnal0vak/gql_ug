@@ -3,9 +3,14 @@ import strawberry
 import asyncio
 import uuid
 from typing import List, Optional, Union, Annotated
-import src.GraphTypeDefinitions
+from uoishelpers.resolvers import createInputs
+
 from .BaseGQLModel import BaseGQLModel, IDType
-from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
+from ._GraphPermissions import (
+    RoleBasedPermission, 
+    OnlyForAuthentized,
+    RBACPermission
+)
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -13,7 +18,10 @@ from ._GraphResolvers import (
     resolve_changedby,
     resolve_created,
     resolve_lastchange,
-    resolve_createdby
+    resolve_createdby,
+
+    encapsulateInsert,
+    encapsulateUpdate
 )
 
 from src.Dataloaders import (
@@ -43,31 +51,31 @@ class UserGQLModel(BaseGQLModel):
 
     @strawberry.field(
         description="""User's family name (like Obama)""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     def surname(self) -> Optional[str]:
         return self.surname
 
     @strawberry.field(
         description="""User's family name (like Obama)""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     def fullname(self) -> Optional[str]:
         return self.fullname
 
     @strawberry.field(
         description="""User's email""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     def email(self) -> Optional[str]:
         return self.email
 
     @strawberry.field(
         description="""User's validity (if their are member of institution)""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     def valid(self) -> Optional[bool]:
         return self.valid
 
     # @strawberry.field(
     #     description="""GDPRInfo for permision test""", 
-    #     permission_classes=[OnlyForAuthentized(), UserGDPRPermission])
+    #     permission_classes=[OnlyForAuthentized, UserGDPRPermission])
     # def GDPRInfo(self, info: strawberry.types.Info) -> Union[str, None]:
     #     actinguser = getUser(info)
     #     print(actinguser)
@@ -75,7 +83,7 @@ class UserGQLModel(BaseGQLModel):
 
     @strawberry.field(
         description="""List of groups, where the user is member""",
-        permission_classes=[OnlyForAuthentized(isList=True)])
+        permission_classes=[OnlyForAuthentized])
     async def membership(
         self, info: strawberry.types.Info
     ) -> List["MembershipGQLModel"]:
@@ -85,7 +93,7 @@ class UserGQLModel(BaseGQLModel):
 
     @strawberry.field(
         description="""List of roles, which the user has""",
-        permission_classes=[OnlyForAuthentized(isList=True)])
+        permission_classes=[OnlyForAuthentized])
     async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
         loader = getLoader(info).roles
         result = await loader.filter_by(user_id=self.id)
@@ -93,13 +101,14 @@ class UserGQLModel(BaseGQLModel):
 
     @strawberry.field(
         description="""List of groups given type, where the user is member""",
-        permission_classes=[OnlyForAuthentized(isList=True)])
+        permission_classes=[OnlyForAuthentized])
     async def member_of(
         self, grouptype_id: IDType, info: strawberry.types.Info
     ) -> List["GroupGQLModel"]:
+        from .groupGQLModel import GroupGQLModel
         loader = getLoader(info).memberships
         rows = await loader.filter_by(user_id=self.id)# , grouptype_id=grouptype_id)
-        results = (src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, row.group_id) for row in rows)
+        results = (GroupGQLModel.resolve_reference(info, row.group_id) for row in rows)
         results = await asyncio.gather(*results)
         results = filter(lambda item: item.grouptype_id == grouptype_id, results)
         return results
@@ -107,7 +116,7 @@ class UserGQLModel(BaseGQLModel):
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
     @strawberry.field(
         description="""Who made last change""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
         from .RBACObjectGQLModel import RBACObjectGQLModel
         result = None if self.id is None else await RBACObjectGQLModel.resolve_reference(info, self.id)
@@ -131,7 +140,7 @@ user_by_id = createRootResolver_by_id(
 @createInputs
 @dataclass
 class UserInputWhereFilter:
-    id: uuid.UUID
+    id: IDType
     name: str
     surname: str
     email: str
@@ -151,7 +160,7 @@ from ._GraphResolvers import createRootResolver_by_page, asPage
 
 @strawberry.field(
     description="returns list of users",
-    permission_classes=[OnlyForAuthentized(isList=True)])
+    permission_classes=[OnlyForAuthentized])
 @asPage
 async def user_page(self, info: strawberry.types.Info, where: Optional[UserInputWhereFilter] = None) -> List[UserGQLModel]:
     loader = getLoader(info).users
@@ -179,7 +188,7 @@ async def user_page(self, info: strawberry.types.Info, where: Optional[UserInput
 @strawberry.field(
     description="""Finds an user by letters in name and surname, letters should be atleast three""",
     deprecation_reason='replaced by `query($letters: String!){userPage(where: {fullname: {_like: $letters}}) { id fullname }}`',
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def user_by_letters(
     self,
     info: strawberry.types.Info,
@@ -201,7 +210,7 @@ async def user_by_letters(
 
 @strawberry.field(
     description="""This is logged user""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def me(self,
     info: strawberry.types.Info) -> Optional[UserGQLModel]:
     result = None
@@ -209,7 +218,7 @@ async def me(self,
     if user is None: return None
     user_id = user.get("id", None)
     if user_id is None: return None
-    # user_id = uuid.UUID(user_id)
+    # user_id = IDType(user_id)
     result = await UserGQLModel.resolve_reference(info, user_id)
     return result
 
@@ -235,7 +244,7 @@ async def me(self,
 #####################################################################
 import datetime
 
-@strawberry.input
+@strawberry.input(description="Describes values for U operation on UserGQLModel")
 class UserUpdateGQLModel:
     id: IDType
     lastchange: datetime.datetime  # razitko
@@ -243,16 +252,16 @@ class UserUpdateGQLModel:
     surname: Optional[str] = None
     email: Optional[str] = None
     valid: Optional[bool] = None
-    changedby: strawberry.Private[uuid.UUID] = None
+    changedby: strawberry.Private[IDType] = None
 
-@strawberry.input
+@strawberry.input(description="Describes initial values for C operation on UserGQLModel")
 class UserInsertGQLModel:
-    id: Optional[uuid.UUID] = None
+    id: Optional[IDType] = strawberry.field(description="primary key", default_factory=uuid.uuid1)
     name: Optional[str] = None
     surname: Optional[str] = None
     email: Optional[str] = None
     valid: Optional[bool] = None
-    createdby: strawberry.Private[uuid.UUID] = None
+    createdby: strawberry.Private[IDType] = None
 
 @strawberry.type
 class UserResultGQLModel:
@@ -264,38 +273,47 @@ class UserResultGQLModel:
         result = await UserGQLModel.resolve_reference(info, self.id)
         return result
 
+class UpdateUserPermission(RBACPermission):
+    message = "User is not allowed to update the user"
+    async def has_permission(self, source, info: strawberry.types.Info, user: UserUpdateGQLModel) -> bool:
+        adminRoleNames = ["administrátor", "personalista"]
+        allowedRoleNames = []
+        role = await self.resolveUserRole(info, 
+            rbacobject=user.id, 
+            adminRoleNames=adminRoleNames, 
+            allowedRoleNames=allowedRoleNames)
+        
+        if not role: return False
+        return True
+
 @strawberry.mutation(
     description="",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[
+        OnlyForAuthentized,
+        UpdateUserPermission
+    ])
 async def user_update(self, info: strawberry.types.Info, user: UserUpdateGQLModel) -> UserResultGQLModel:
-    #print("user_update", flush=True)
-    #print(user, flush=True)
-    actinguser = getUserFromInfo(info)
-    user.changedby = actinguser["id"]
-    loader = getLoader(info).users
-    
-    updatedrow = await loader.update(user)
-    #print("user_update", updatedrow, flush=True)
-    result = UserResultGQLModel()
-    result.id = user.id
+    return encapsulateUpdate(info, UserGQLModel.getLoader(info), user, UserResultGQLModel(msg="ok", id=user.id))
 
-    result.msg = "fail" if updatedrow is None else "ok"
-    # print("user_update", result.msg, flush=True)
-    return result
+class InsertUserPermission(RBACPermission):
+    message = "User is not allowed to create an user"
+    async def has_permission(self, source, info: strawberry.types.Info, user: UserInsertGQLModel) -> bool:
+        adminRoleNames = ["administrátor", "personalista"]
+        allowedRoleNames = []
+        role = await self.resolveUserRole(info, 
+            rbacobject=user.id, 
+            adminRoleNames=adminRoleNames, 
+            allowedRoleNames=allowedRoleNames)
+        
+        if not role: return False
+        return True
 
 @strawberry.mutation(
     description="",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[
+        OnlyForAuthentized,
+        InsertUserPermission                
+    ])
 async def user_insert(self, info: strawberry.types.Info, user: UserInsertGQLModel) -> UserResultGQLModel:
-    actinguser = getUserFromInfo(info)
-    user.createdby = actinguser["id"]
-    
-    loader = getLoader(info).users
-    
-    row = await loader.insert(user)
+    return encapsulateInsert(info, UserGQLModel.getLoader(info), user, UserResultGQLModel(msg="ok", id=None))
 
-    result = UserResultGQLModel()
-    result.id = row.id
-    result.msg = "ok"
-    
-    return result

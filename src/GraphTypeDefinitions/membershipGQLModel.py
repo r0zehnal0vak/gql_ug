@@ -2,9 +2,13 @@ import datetime
 import strawberry
 import uuid
 from typing import List, Optional, Union, Annotated
-import src.GraphTypeDefinitions
+from uoishelpers.resolvers import createInputs
+
 from .BaseGQLModel import BaseGQLModel, IDType
-from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
+from ._GraphPermissions import (
+    RoleBasedPermission, OnlyForAuthentized,
+    RBACPermission
+)
 from ._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -12,7 +16,10 @@ from ._GraphResolvers import (
     resolve_changedby,
     resolve_created,
     resolve_lastchange,
-    resolve_createdby
+    resolve_createdby,
+    
+    encapsulateInsert,
+    encapsulateUpdate
 )
 
 from src.Dataloaders import (
@@ -39,42 +46,44 @@ class MembershipGQLModel(BaseGQLModel):
 
     @strawberry.field(
         description="""user""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def user(self, info: strawberry.types.Info) -> Optional["UserGQLModel"]:
+        from .userGQLModel import UserGQLModel
         # return self.user
-        result = await src.GraphTypeDefinitions.UserGQLModel.resolve_reference(info=info, id=self.user_id)
+        result = await UserGQLModel.resolve_reference(info=info, id=self.user_id)
         return result
 
     @strawberry.field(
         description="""group""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def group(self, info: strawberry.types.Info) -> Optional["GroupGQLModel"]:
+        from .groupGQLModel import GroupGQLModel
         # return self.group
-        result = await src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info=info, id=self.group_id)
+        result = await GroupGQLModel.resolve_reference(info=info, id=self.group_id)
         return result
 
     @strawberry.field(
         description="""is the membership is still valid""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def valid(self) -> Union[bool, None]:
         return self.valid
 
     @strawberry.field(
         description="""date when the membership begins""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def startdate(self) -> Union[datetime.datetime, None]:
         return self.startdate
 
     @strawberry.field(
         description="""date when the membership ends""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def enddate(self) -> Union[datetime.datetime, None]:
         return self.enddate
 
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
     @strawberry.field(
         description="""""",
-        permission_classes=[OnlyForAuthentized()])
+        permission_classes=[OnlyForAuthentized])
     async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
         from .RBACObjectGQLModel import RBACObjectGQLModel
         result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(info, self.group_id)
@@ -102,7 +111,7 @@ from ._GraphResolvers import asPage
 
 @strawberry.field(
     description="Retrieves memberships",
-    permission_classes=[OnlyForAuthentized(isList=True)])
+    permission_classes=[OnlyForAuthentized])
 @asPage
 async def membership_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
@@ -112,9 +121,9 @@ async def membership_page(
 
 @strawberry.field(
     description="Retrieves the membership",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def membership_by_id(
-    self, info: strawberry.types.Info, id: uuid.UUID
+    self, info: strawberry.types.Info, id: IDType
 ) -> Optional[MembershipGQLModel]:
     return await MembershipGQLModel.resolve_reference(info, id)
 
@@ -126,26 +135,26 @@ async def membership_by_id(
 #####################################################################
 import datetime
 
-@strawberry.input
+@strawberry.input(description="")
 class MembershipUpdateGQLModel:
     id: IDType
     lastchange: datetime.datetime   
     valid: Optional[bool] = None
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
-    changedby: strawberry.Private[uuid.UUID] = None
+    changedby: strawberry.Private[IDType] = None
 
-@strawberry.input
+@strawberry.input(description="")
 class MembershipInsertGQLModel:
     user_id: IDType
     group_id: IDType
-    id: Optional[uuid.UUID] = None
+    id: Optional[IDType] = None
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
-    createdby: strawberry.Private[uuid.UUID] = None
+    createdby: strawberry.Private[IDType] = None
 
-@strawberry.type
+@strawberry.type(description="")
 class MembershipResultGQLModel:
     id: IDType = None
     msg: str = None
@@ -155,9 +164,32 @@ class MembershipResultGQLModel:
         result = await MembershipGQLModel.resolve_reference(info, self.id)
         return result
     
+class UpdateMembershipPermission(RBACPermission):
+    message = "User is not allowed to change membership"
+    async def has_permission(self, source, info: strawberry.types.Info, membership: "MembershipInsertGQLModel") -> bool:
+        adminRoleNames = ["administrátor"]
+        allowedRoleNames = ["garant"]
+        role = await self.resolveUserRole(info, 
+            rbacobject=membership.group_id,
+            adminRoleNames=adminRoleNames, 
+            allowedRoleNames=allowedRoleNames)
+        
+        if not role: return False
+        # roleTypeName = role["type"]["name"]
+        # if roleTypeName in allowedRoleNames:
+        #     if group.mastergroup_id:
+        #         raise self.error_class(f"{roleTypeName} cannot change mastergroup_id")
+        #     if group.grouptype_id:
+        #         raise self.error_class(f"{roleTypeName} cannot change grouptype_id")
+        return True
+
+
 @strawberry.mutation(
     description="""Update the membership, cannot update group / user""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[
+        OnlyForAuthentized,
+        UpdateMembershipPermission
+    ])
 async def membership_update(self, 
     info: strawberry.types.Info, 
     membership: "MembershipUpdateGQLModel"
@@ -173,10 +205,25 @@ async def membership_update(self,
     
     return result
 
+class InsertMembershipPermission(RBACPermission):
+    message = "User is not allowed create new membership"
+    async def has_permission(self, source, info: strawberry.types.Info, membership: "MembershipInsertGQLModel") -> bool:
+        adminRoleNames = ["administrátor"]
+        allowedRoleNames = ["garant"]
+        role = await self.resolveUserRole(info, 
+            rbacobject=membership.group_id, 
+            adminRoleNames=adminRoleNames, 
+            allowedRoleNames=allowedRoleNames)
+        
+        if not role: return False
+        return True
 
 @strawberry.mutation(
     description="""Inserts new membership""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[
+        OnlyForAuthentized,
+        InsertMembershipPermission
+    ])
 async def membership_insert(self, 
     info: strawberry.types.Info, 
     membership: "MembershipInsertGQLModel"

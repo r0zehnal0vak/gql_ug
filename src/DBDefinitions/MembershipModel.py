@@ -33,3 +33,5 @@ class MembershipModel(BaseModel):
 
     user = relationship("UserModel", back_populates="memberships", foreign_keys=[user_id])
     group = relationship("GroupModel", back_populates="memberships")
+
+    rbacobject = UUIDFKey(nullable=True, comment="holds object for role resolution")#Column(ForeignKey("users.id"), index=True, nullable=True)    

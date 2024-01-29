@@ -29,3 +29,5 @@ class RoleTypeModel(BaseModel):
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp")
     createdby = UUIDFKey(nullable=True, comment="who has created this record")#Column(ForeignKey("users.id"), index=True, nullable=True)
     changedby = UUIDFKey(nullable=True, comment="who has changed this record")#Column(ForeignKey("users.id"), index=True, nullable=True)
+    
+    rbacobject = UUIDFKey(nullable=True, comment="holds object for role resolution")#Column(ForeignKey("users.id"), index=True, nullable=True)        

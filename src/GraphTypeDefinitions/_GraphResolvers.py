@@ -7,6 +7,7 @@ from .BaseGQLModel import IDType
 UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
 GroupGQLModel = typing.Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
+from ..Dataloaders import getUserFromInfo
 
 @strawberry.field(description="""Entity primary key""")
 def resolve_id(self) -> IDType:
@@ -14,26 +15,26 @@ def resolve_id(self) -> IDType:
 
 @strawberry.field(
     description="""Name """,
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 def resolve_name(self) -> str:
     return self.name
 
 @strawberry.field(
     description="""English name""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 def resolve_name_en(self) -> str:
     result = self.name_en if self.name_en else ""
     return result
 
 @strawberry.field(
     description="""Time of last update""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 def resolve_lastchange(self) -> datetime.datetime:
     return self.lastchange
 
 @strawberry.field(
     description="""Time of entity introduction""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 def resolve_created(self) -> typing.Optional[datetime.datetime]:
     return self.created
 
@@ -44,13 +45,13 @@ async def resolve_user(user_id):
     
 @strawberry.field(
     description="""Who created entity""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def resolve_createdby(self) -> typing.Optional["UserGQLModel"]:
     return await resolve_user(self.createdby)
 
 @strawberry.field(
     description="""Who made last change""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
     return await resolve_user(self.changedby)
 
@@ -60,11 +61,29 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
 #     result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobject_id)
 #     return result
 
+
+async def encapsulateUpdate(info, loader, entity, result):
+    user = getUserFromInfo(info)
+    entity.changedby = user["id"]
+
+    row = await loader.update(entity)
+    result.msg = "fail" if row is None else "ok"
+    return result
+
+async def encapsulateInsert(info, loader, entity, result):
+    user = getUserFromInfo(info)
+    entity.createdby = user["id"]
+    
+    row = await loader.insert(entity)
+    result.msg = "ok"
+    result.id = result.id if result.id else row.id       
+    return result   
+
 resolve_result_id: IDType = strawberry.field(description="primary key of CU operation object",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 resolve_result_msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
 For update operation fail should be also stated when bad lastchange has been entered.""",
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
 
 from inspect import signature
 import inspect 
@@ -275,7 +294,7 @@ def asForeignList(*, foreignKeyName: str):
 def createRootResolver_by_id(scalarType: None, description="Retrieves item by its id"):
     assert scalarType is not None
     @strawberry.field(description=description,
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
     async def by_id(
         self, info: strawberry.types.Info, id: IDType
     ) -> typing.Optional[scalarType]:
@@ -297,7 +316,7 @@ def createRootResolver_by_page(
     assert whereFilterType is not None
     
     @strawberry.field(description=description,
-    permission_classes=[OnlyForAuthentized()])
+    permission_classes=[OnlyForAuthentized])
     async def paged(
         self, info: strawberry.types.Info, 
         skip: int=skip, limit: int=limit, where: typing.Optional[whereFilterType] = None,

@@ -1,12 +1,14 @@
 from functools import cache
 from src.DBDefinitions import (
-    GroupTypeModel, 
-    RoleTypeModel,
-    RoleCategoryModel,
-    UserModel,
-    GroupModel,
-    MembershipModel,
-    RoleModel,
+    BaseModel,
+    systemModels
+    # GroupTypeModel, 
+    # RoleTypeModel,
+    # RoleCategoryModel,
+    # UserModel,
+    # GroupModel,
+    # MembershipModel,
+    # RoleModel,
 )
 
 
@@ -934,24 +936,10 @@ async def initDB(asyncSessionMaker):
 
     demo = os.environ.get("DEMODATA", None)
     if demo:
-        dbModels = [
-            GroupTypeModel, 
-            RoleCategoryModel,
-            RoleTypeModel,
-            UserModel,
-            GroupModel,
-            MembershipModel,
-            RoleModel,
-        ]        
-
+        dbModels = [DBModel for DBModel in BaseModel.registry.mappers]
     else:
-        dbModels = [
-            GroupTypeModel, 
-            RoleCategoryModel,
-            RoleTypeModel,
-        ]
-        
-
+        dbModels = systemModels
+       
     jsonData = get_demodata()
     await ImportModels(asyncSessionMaker, dbModels, jsonData)
     pass

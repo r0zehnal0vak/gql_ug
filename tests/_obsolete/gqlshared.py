@@ -220,7 +220,7 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
     async def test_update():
         logging.debug("test_update")
         assert variables.get("id", None) is not None, "variables has not id"
-        variables["id"] = uuid.UUID(f"{variables['id']}")
+        variables["id"] = IDType(f"{variables['id']}")
         assert "$lastchange: DateTime!" in query, "query must have parameter $lastchange: DateTime!"
         assert "lastchange: $lastchange" in query, "query must use lastchange: $lastchange"
         assert tableName != "", "missing table name"

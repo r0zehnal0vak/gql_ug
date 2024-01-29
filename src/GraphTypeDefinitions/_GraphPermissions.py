@@ -206,6 +206,7 @@ def ReadAllRoles():
 
 if not isDEMO:
     rolelist = ReadAllRoles()
+    print("rolelist", rolelist)
 
 roleIndex = { role["name_en"]: role["id"] for role in rolelist }
 
@@ -282,107 +283,224 @@ from src.Dataloaders import (
     getUserFromInfo
     )
 
+from strawberry.type import StrawberryList
+class OnlyForAuthentized(strawberry.permission.BasePermission):
+    message = "User is not authenticated"
 
-@cache
-def OnlyForAuthentized(isList=False):
-    class OnlyForAuthentized(strawberry.permission.BasePermission):
-        message = "User is not authenticated"
-
-        async def has_permission(
-            self, source, info: strawberry.types.Info, **kwargs
-        ) -> bool:
-            if self.isDEMO:
-                print("DEMO Enabled, not for production")
-                return True
-            
-            user = getUserFromInfo(info)
-            return (False if user is None else True)
-            #     return False        
-            # return True
+    async def has_permission(
+        self, source, info: strawberry.types.Info, **kwargs
+    ) -> bool:
+        if self.isDEMO:
+            print("DEMO Enabled, not for production")
+            return True
         
-        def on_unauthorized(self):
-            return ([] if isList else None)
-            #     return []
-            # else:
-            #     return None
-            
-        @cached_property
-        def isDEMO(self):
-            DEMO = os.getenv("DEMO", None)
-            if DEMO == "True":
-                return True
-            else:
-                return False
-            
-    return OnlyForAuthentized
+        self.defaultResult = [] if info._field.type.__class__ == StrawberryList else None
+        user = getUserFromInfo(info)
+        return (False if user is None else True)
+    
+    def on_unauthorized(self):
+        return self.defaultResult
+        
+    @cached_property
+    def isDEMO(self):
+        DEMO = os.getenv("DEMO", None)
+        return DEMO == "True"
 
-@cache
-def RoleBasedPermission(roles: str = "", whatreturn=[]):
+# def createRoleGetter():
+#     allroles = []
+#     from src.Dataloaders import getLoadersFromInfo as getLoader
+#     async def getter(info: strawberry.types.Info):
+#         async def getAllRoles():
+#             loader = getLoader(info).roletypes
+#             rows = await loader.page(limit=1000)
+#             scalars = rows.scalars()
+#             return list(scalars)
+
+#         if len(allroles) == 0:
+#             allroles = await getAllRoles()
+
+#         return allroles
+#     return getter
+
+# getAllRoles = createRoleGetter()    
+
+class RBACPermission(BasePermission):
+    _allRoles = None
+    @classmethod
+    def getAllRoles(cls):
+        if cls._allRoles is not None:
+            return cls._allRoles
+        from ..DBDefinitions import RoleTypeModel, startSyncEngine
+        statement = select(RoleTypeModel)
+        sessionMaker = startSyncEngine()
+        with sessionMaker() as session:
+            rows = session.execute(statement)
+            result = [{"id": r.id, "name": r.name, "name_en": r.name_en} for r in rows.scalars()]
+            cls._allRoles = result
+        return result
+
+    async def getUserRoles(self, info: strawberry.types.Info):
+        from .roleGQLModel import RoleGQLModel
+        user = getUserFromInfo(info)
+        userroles = user.get("roles")
+        if userroles is None:
+            loader = RoleGQLModel.getLoader(info)
+            rolerows = await loader.filter_by(user_id=self.id)
+            
+            allRoles = RBACPermission.getAllRoles()
+            indexedRoleTypes = {"id": r for r in allRoles}
+
+            userroles = [
+                {
+                    "id": rolerow.id,
+                    "group_id": rolerow.group_id,
+                    "user_id": rolerow.user_id,
+                    "roletype_id": rolerow.roletype_id,
+                    "type": indexedRoleTypes[rolerow.roletype_id]
+                } 
+                for rolerow in rolerows]
+            # write back to context and cache it for next use in current request
+            user["roles"] = userroles
+        return userroles
+        
+
+    async def getRoles(self, source: Any, info: strawberry.types.Info): 
+        "returns roles related to source"
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        assert hasattr(source, "rbacobject"), f"missing rbacobject on {source}"
+        
+        rbacobject = source.rbacobject
+        
+        #rbacobject
+        assert rbacobject is not None, f"RoleBasedPermission cannot be used on {source} as it has None value"
+        # rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+
+        ## zjistime, jake role jsou vztazeny k rbacobject 
+        # print(response)
+
+        authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)           
+        return authorizedroles
+    
+    async def getActiveRoles(self, source: Any, info: strawberry.types.Info):
+        "returns roles related to source which has logged user"
+        authorizedroles = await self.getRoles(source, info)
+        user = getUserFromInfo(info)
+        # logging.info(f"RolebasedPermission.authorized user {user}")
+        user_id = user["id"]
+        usersrole = [r for r in authorizedroles if (r["user_id"] == user_id)]
+        return usersrole
+    
+    async def testIsAdmin(self, info: strawberry.types.Info, adminRoleNames=["administrátor"]):
+        assert len(adminRoleNames) > 0, "as adminRoleNames is empty, this always fails"
+        userRoles = await self.getUserRoles(info)
+        adminRoles = filter(lambda role: role["type"]["name"] in adminRoleNames, userRoles)
+        # isAdmin = next(adminRoles, None) is not None
+        return next(adminRoles, None)
+    
+    async def testIsAllowed(self, info: strawberry.types.Info, rbacobject, allowedRolesNames = []):
+        assert len(allowedRolesNames) > 0, "as allowedRolesNames is empty, this always fails"
+        relatedRoles = await self.getActiveRoles(rbacobject, info)
+        allowedRoles = filter(lambda role: role["type"]["name"] in allowedRolesNames, relatedRoles)
+        return next(allowedRoles, None)
+
+    async def resolveUserRole(self, info: strawberry.types.Info, rbacobject, adminRoleNames=["administrátor"], allowedRoleNames = []):
+        "test if logged user has appropriate global role (without relation to rbacobject) or appropriate role related to rbacobject"
+        if len(adminRoleNames) > 0:
+            adminRole = await self.testIsAdmin(info, adminRoleNames=adminRoleNames)
+            if adminRole: return adminRole
+            elif rbacobject is None:
+                return None
+        
+        assert rbacobject is not None, "no admin role defined and rbacobject is None"
+
+        if len(allowedRoleNames) > 0:
+            return await self.testIsAllowed(info, rbacobject, allowedRoleNames)
+        else:
+            assert len(adminRoleNames) > 0, "no admin role defined nor allowedRolesNames defined"
+        # self.__class__.__name__
+        return None
+
+
+class OnlyForAdmins(RBACPermission):
+    message = "User is not allowed create new role category"
+    async def has_permission(self, source, info: strawberry.types.Info, **kwargs) -> bool:
+        adminRoleNames = ["administrátor"]
+        adminrole = await self.testIsAdmin(info, adminRoleNames=adminRoleNames)
+        
+        if not adminrole: return False
+        return True
+
+class AlwaysFailPermission(RBACPermission):
+
+    async def has_permission(self, source, info: strawberry.types.Info, **kwargs) -> bool:
+        self.defaultResult = [] if info._field.type.__class__ == StrawberryList else None
+        return False
+    
+    def on_unauthorized(self) -> None:
+        return self.defaultResult
+
+
+def InsertRBACPermission(roles: str = "", get_rbacobject = None):
+    assert get_rbacobject is not None, "missing get_rbacobject"
     roleIdsNeeded = RolesToList(roles)
-
-    from .externals import RBACObjectGQLModel
-    class RolebasedPermission(BasePermission):
+    class InsertPermission(RBACPermission):
         message = "User has not appropriate roles"
 
-        def on_unauthorized(self) -> None:
-            return whatreturn
+        on_unauthorized = None
         
         async def has_permission(
                 self, source: Any, info: strawberry.types.Info, **kwargs: Any
             # self, source, info: strawberry.types.Info, **kwargs
             # self, source, **kwargs
         ) -> bool:
+            rbacobject = get_rbacobject(source, info, **kwargs)
+            activeRoles = self.getActiveRoles(rbacobject, info)
+            s = [r for r in activeRoles if (r["roletype"]["id"] in roleIdsNeeded)]           
+            isAllowed = len(s) > 0
+            return isAllowed
+        
+    return InsertPermission
+
+
+class AnyRolePermission(RBACPermission):
+    message = "User has not appropriate roles"
+
+    def on_unauthorized(self) -> None:
+        return self.defaultResult
+    
+    async def has_permission(
+            self, source: Any, info: strawberry.types.Info, **kwargs: Any
+        # self, source, info: strawberry.types.Info, **kwargs
+        # self, source, **kwargs
+    ) -> bool:
+        self.defaultResult = [] if info._field.type.__class__ == StrawberryList else None
+        activeRoles = self.getActiveRoles(source, info)
+        isAllowed = len(activeRoles) > 0
+        return isAllowed
+    
+
+
+@cache
+def RoleBasedPermission(roles: str = ""):
+    roleIdsNeeded = RolesToList(roles)
+
+    class RolebasedPermission(RBACPermission):
+        message = "User has not appropriate roles"
+
+        def on_unauthorized(self) -> None:
+            return self.defaultResult
+        
+        async def has_permission(
+                self, source: Any, info: strawberry.types.Info, **kwargs: Any
+            # self, source, info: strawberry.types.Info, **kwargs
+            # self, source, **kwargs
+        ) -> bool:
+            self.defaultResult = [] if info._field.type.__class__ == StrawberryList else None
             # return False
             logging.info(f"has_permission {kwargs}")
             # assert False
-
-            # GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
-            # assert GQLUG_ENDPOINT_URL is not None
-            # proxy = createProxy(GQLUG_ENDPOINT_URL)
-
-            print("RolebasedPermission", self) ##
-            print("RolebasedPermission", source) ## self as in GQLModel
-            print("RolebasedPermission", kwargs)
-
-            assert hasattr(source, "rbacobject"), f"missing rbacobject on {source}"
-            
-            rbacobject = source.rbacobject
-            
-            #rbacobject
-            assert rbacobject is not None, f"RoleBasedPermission cannot be used on {source} as it has None value"
-            # rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
-
-
-            ## zjistime, jake role jsou vztazeny k rbacobject 
-            # print(response)
-
-            authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)
-            # authloader = getLoadersFromInfo(info=info).authorizations
-            # authloader.setTokenByInfo(info)
-            # authorizedroles = await authloader.load(rbacobject)
-            
-
-            print("RolebasedPermission.rbacobject", rbacobject)
-            # _ = await self.canEditGroup(session,  source.id, ...)
-            print("RolebasedPermission.authorized", authorizedroles)
-            
-            # logging.info(f"RolebasedPermission.authorized {authorizedroles}")
-
-            # user_id = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
-            user = getUserFromInfo(info)
-            # logging.info(f"RolebasedPermission.authorized user {user}")
-            user_id = user["id"]
-            s = [r for r in authorizedroles if (r["roletype"]["id"] in roleIdsNeeded)and(r["user"]["id"] == user_id)]
-            # s = [r for r in authorizedroles if r["roletype"]["id"] in roleIdsNeeded]
-            
-            logging.info(f"RolebasedPermission.authorized user {user} has roles {s}")
-
-            if len(s) > 0:
-                print("RolebasedPermission.access allowed")
-            else:
-                print("RolebasedPermission.access denied")
-            print(s)
-            print(roleIdsNeeded)
+            activeRoles = self.getActiveRoles(source, info)
+            s = [r for r in activeRoles if (r["roletype"]["id"] in roleIdsNeeded)]           
             isAllowed = len(s) > 0
             return isAllowed
         

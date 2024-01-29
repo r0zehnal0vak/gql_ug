@@ -4,123 +4,14 @@ import strawberry
 from dataclasses import dataclass
 import datetime
 import logging
+from uoishelpers.resolvers import createInputs
+
+
+from .BaseGQLModel import IDType
+
 
 inputTypeGQLMapper = {}
 
-def createInputs(cls):
-    clsname = cls.__name__
-    print(f"GQL definitions for {clsname}")
-    #whereName = clsname + "_where"
-    whereName = clsname
-    orName = clsname + "_or"
-    andName = clsname + "_and"
-
-    fieldNames = [field_name for field_name in cls.__annotations__]
-    opNames = [clsname + "_" + field_name for field_name in fieldNames]
-    types = [field for field in cls.__annotations__.values()]
-
-    def createCustomInput(field, name, baseType = str):
-        result = inputTypeGQLMapper.get(baseType, None)
-        if result is None:
-            print(30*"#")
-            print(f"New GQL type for {baseType.__name__}")
-            if (baseType.__name__ == typing.Annotated.__name__):
-                print(30*"#", "Annotated")
-                return baseType
-            logging.info(f"New GQL type for {baseType}")
-            print(f"New GQL type for {baseType}")
-            result = type(name, (object,), {})
-            result.__annotations__ = {
-                op: typing.Optional[baseType] for op in ["_eq", "_le", "_lt", "_ge", "_gt"]
-            }
-            for op in ["_eq", "_le", "_lt", "_ge", "_gt"]:
-                setattr(result, op, strawberry.field(name=op, description="operation for select.filter() method", default=None))           
-            result = strawberry.input(result, description=f"Expression on attribute '{field}'. Only one constrain allowed.")
-        else:
-            logging.info(f"Using GQL type for {(baseType)} ({result})")
-            print(f"Using GQL type for {(baseType)} ({result})")
-        return   result
-
-    inputTypes = [
-        createCustomInput(field, name, baseType)
-        for field, name, baseType in zip(fieldNames, opNames, types)
-    ]
-    
-    inputTypesDict = {
-        fieldName: typing.Optional[inputType]
-        for fieldName, inputType in zip(fieldNames, inputTypes)
-    }
-
-    #print("inputTypesDict")
-    #print(inputTypesDict)
-
-    def createOr():
-        result = type(orName, (object,), {})
-        anotations = {
-            "_and": typing.Optional[typing.List[andName]],
-            **inputTypesDict
-        }
-        result.__annotations__ = anotations
-        for op in anotations.keys():
-            setattr(result, op, 
-                strawberry.field(name=op, description="Filter method", default=None)
-            )
-        return result  
-        
-    orOp = strawberry.input(createOr(), description=f"Or operator definition on {clsname}")
-    #print("orOp")
-    #print(orOp)
-
-    def createAnd():
-        result = type(andName, (object,), {})
-        anotations = {
-            "_or": typing.Optional[typing.List[orName]],
-            **inputTypesDict
-        }
-        result.__annotations__ = anotations
-        for op in anotations.keys():
-            setattr(result, op, 
-                strawberry.field(name=op, description="Filter method", default=None)
-            )
-        return result
-
-    andOp = strawberry.input(createAnd(), description=f"And operator definition on {clsname}")
-    #print("andOp")
-    #print(andOp)
-
-    def createWhereOp():
-        result = type(whereName, (object,), {})
-        anotations = {
-            "_or": typing.Optional[typing.List[orOp]],
-            "_and": typing.Optional[typing.List[andOp]],
-            **inputTypesDict
-        }
-        result.__annotations__ = anotations
-        for op in anotations.keys():
-            setattr(result, op, 
-                strawberry.field(name=op, description="Filter method", default=None)
-            )
-            
-        return result  
-
-    whereOp = strawberry.input(createWhereOp(), description=f"Operators definition on {clsname}")
-    #print("topOp")
-    #print(topOp)
-       
-    ####################################
-    # make all ops global in this module
-    ####################################
-    result = [whereOp, andOp, orOp, *inputTypes]
-    this = sys.modules[__name__]
-    for r in result:
-        setattr(this, r.__name__, r)
-
-    #return [topOp, andOp, orOp, *inputTypes]
-
-    #register new type
-    inputTypeGQLMapper[whereOp] = whereOp
-    return whereOp
-    #return inputTypes
 
 @strawberry.input(description="Str filter methods, only one constrain allowed")
 class StrFilter:
@@ -156,13 +47,13 @@ class BoolFilter:
     _eq: typing.Optional[bool] = strawberry.field(name="_eq", description="operation for select.filter() method", default=None)
 
 import uuid
-uuid.UUID
+
 @strawberry.input(description="Integer filter methods, only one constrain allowed")
 class UuidFilter:
-    _eq: typing.Optional[uuid.UUID] = strawberry.field(name="_eq", description="operation for select.filter() method", default=None)
-    _in: typing.Optional[typing.List[uuid.UUID]] = strawberry.field(name="_in", description="operation for select.filter() method", default=None)
+    _eq: typing.Optional[IDType] = strawberry.field(name="_eq", description="operation for select.filter() method", default=None)
+    _in: typing.Optional[typing.List[IDType]] = strawberry.field(name="_in", description="operation for select.filter() method", default=None)
 
-inputTypeGQLMapper[uuid.UUID] = UuidFilter
+inputTypeGQLMapper[IDType] = UuidFilter
 inputTypeGQLMapper[int] = IntFilter
 inputTypeGQLMapper[str] = StrFilter
 inputTypeGQLMapper[datetime.datetime] = DatetimeFilter
@@ -172,12 +63,12 @@ inputTypeGQLMapper[bool] = BoolFilter
 # from graphql.language import DirectiveLocation
 # @strawberry.input
 # class ReduceInput:
-#     id: uuid.UUID
+#     id: IDType
 
 # @strawberry.directive(
 #     locations=[DirectiveLocation.FIELD], description="returns just first"
 # )
-# def reduce(value, param: ReduceInput) -> uuid.UUID :
+# def reduce(value, param: ReduceInput) -> IDType :
 #     # values = [v for v in value]
 #     first = next(value, None)
 #     return [] if first is None else [first]
