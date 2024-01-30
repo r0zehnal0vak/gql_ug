@@ -541,75 +541,104 @@
             "valid": true
         }
     ],
+    "groupcategories": [
+        {
+            "name": "univerzita",
+            "name_en": "university",
+            "id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e"
+        },
+        {
+            "name": "organizace",
+            "name_en": "organization",
+            "id": "6b99de73-205a-41fc-9847-6f04fddc38f1"
+        },
+        {
+            "name": "akreditace",
+            "name_en": "acreditation",
+            "id": "45ce1b87-021c-4671-8f9f-f68b76ff0701"
+        }
+    ],
     "grouptypes": [
         {
             "name": "univerzita",
             "name_en": "university",
             "ex_type": "100",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e152-610c-11ed-9f29-001a7dda7110"
         },
         {
             "name": "fakulta",
             "name_en": "faculty",
             "ex_type": "300",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e153-610c-11ed-bf19-001a7dda7110"
         },
         {
             "name": "ústav",
             "name_en": "institute",
             "ex_type": "400",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e154-610c-11ed-bdbf-001a7dda7110"
         },
         {
             "name": "centrum",
             "name_en": "centre",
             "ex_type": "410",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e155-610c-11ed-bdbf-001a7dda7110"
         },
         {
             "name": "katedra",
             "name_en": "department",
             "ex_type": "500",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e155-610c-11ed-844e-001a7dda7110"
         },
         {
             "name": "oddělení",
             "name_en": "section",
             "ex_type": "600",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e156-610c-11ed-87ef-001a7dda7110"
         },
         {
             "name": "studijní skupina",
             "name_en": "study group",
             "ex_type": "001",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e157-610c-11ed-9312-001a7dda7110"
         },
         {
             "name": "stalý stav",
             "name_en": "all teachers",
             "ex_type": "200",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "cd49e157-610c-11ed-9f29-001a7dda7110"
         },
         {
             "name": "studenti",
             "name_en": "all students",
             "ex_type": "002",
+            "category_id": "be2b2dcc-4bfe-4035-99e8-dd6d6f01562e",
             "id": "0eb35718-615b-11ed-b753-0242ac120003"
         },
         {
             "id": "b1bedec8-931f-11ed-9b95-0242ac110002",
+            "category_id": "45ce1b87-021c-4671-8f9f-f68b76ff0701",
             "name": "garance programu",
             "name_en": "program grants"
         },
         {
             "id": "b1bedf72-931f-11ed-9b95-0242ac110002",
+            "category_id": "45ce1b87-021c-4671-8f9f-f68b76ff0701",
             "name": "garance předmětu",
             "name_en": "subject grants"
         },
         {
             "name": "správa nemovitosti",
             "name_en": "facility management",
-            "id": "de8654be-e776-4b6e-bb1e-2d5c949aa1eb"
+            "id": "de8654be-e776-4b6e-bb1e-2d5c949aa1eb",
+            "category_id": "6b99de73-205a-41fc-9847-6f04fddc38f1"
         }
 
     ],
