@@ -87,7 +87,7 @@ class GroupCategoryInputWhereFilter:
 from ._GraphResolvers import asPage
 
 @strawberry.field(
-    description="""Returns a list of groups types (paged)""",
+    description="""Returns a list of groups categories (paged)""",
     permission_classes=[OnlyForAuthentized])
 @asPage
 async def group_category_page(
@@ -98,7 +98,7 @@ async def group_category_page(
     return loader
 
 @strawberry.field(
-    description="""Finds a group type by its id""",
+    description="""Finds a group category by its id""",
     permission_classes=[OnlyForAuthentized])
 async def group_category_by_id(
     self, info: strawberry.types.Info, id: IDType

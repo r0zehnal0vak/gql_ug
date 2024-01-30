@@ -90,7 +90,7 @@ from dataclasses import dataclass
 class GroupTypeInputWhereFilter:
     id: IDType
     name: str
-    valid: bool
+    category_id: IDType
     # from .membershipGQLModel import MembershipInputWhereFilter
     # memberships: MembershipInputWhereFilter
 
