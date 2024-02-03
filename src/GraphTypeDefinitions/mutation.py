@@ -45,6 +45,13 @@ class Mutation:
     from .groupTypeGQLModel import group_type_update
     group_type_update = group_type_update
 
+    from .groupCategoryGQLModel import (
+        group_category_insert,
+        group_category_update
+    )
+    group_category_insert = group_category_insert
+    group_category_update = group_category_update
+
     from .roleListGQLModel import (
         role_type_list_add,
         role_type_list_remove

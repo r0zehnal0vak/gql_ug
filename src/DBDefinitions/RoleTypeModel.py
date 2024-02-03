@@ -24,6 +24,7 @@ class RoleTypeModel(BaseModel):
     category_id = Column(ForeignKey("rolecategories.id"), index=True, nullable=True)
 
     roles = relationship("RoleModel", back_populates="roletype")
+    category = relationship("RoleCategoryModel", viewonly=True)
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="when record has been created")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp")

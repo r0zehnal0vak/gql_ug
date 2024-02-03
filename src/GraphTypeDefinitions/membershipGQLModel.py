@@ -25,6 +25,7 @@ from ._GraphResolvers import (
 from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
+from src.DBResolvers import DBResolvers
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
@@ -36,49 +37,53 @@ UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
 class MembershipGQLModel(BaseGQLModel):
     @classmethod
     def getLoader(cls, info):
-        return getLoader(info).memberships
+        return getLoader(info).MembershipModel
 
     id = resolve_id
     changedby = resolve_changedby
     created = resolve_created
     lastchange = resolve_lastchange
     createdby = resolve_createdby
-
-    @strawberry.field(
+   
+    user = strawberry.field(
         description="""user""",
-        permission_classes=[OnlyForAuthentized])
-    async def user(self, info: strawberry.types.Info) -> Optional["UserGQLModel"]:
-        from .userGQLModel import UserGQLModel
-        # return self.user
-        result = await UserGQLModel.resolve_reference(info=info, id=self.user_id)
-        return result
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.MembershipModel.group(UserGQLModel)
+    )
 
-    @strawberry.field(
+    group = strawberry.field(
         description="""group""",
-        permission_classes=[OnlyForAuthentized])
-    async def group(self, info: strawberry.types.Info) -> Optional["GroupGQLModel"]:
-        from .groupGQLModel import GroupGQLModel
-        # return self.group
-        result = await GroupGQLModel.resolve_reference(info=info, id=self.group_id)
-        return result
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.MembershipModel.group(GroupGQLModel)
+    )
 
-    @strawberry.field(
+    valid = strawberry.field(
         description="""is the membership is still valid""",
-        permission_classes=[OnlyForAuthentized])
-    async def valid(self) -> Union[bool, None]:
-        return self.valid
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.MembershipModel.valid
+    )
+    
+    startdate = strawberry.field(
         description="""date when the membership begins""",
-        permission_classes=[OnlyForAuthentized])
-    async def startdate(self) -> Union[datetime.datetime, None]:
-        return self.startdate
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.MembershipModel.startdate
+    )
+    
+    enddate = strawberry.field(
         description="""date when the membership ends""",
-        permission_classes=[OnlyForAuthentized])
-    async def enddate(self) -> Union[datetime.datetime, None]:
-        return self.enddate
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.MembershipModel.enddate
+    )
 
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
     @strawberry.field(
@@ -107,27 +112,23 @@ class MembershipInputWhereFilter:
     group: GroupInputWhereFilter
     user: UserInputWhereFilter
 
-from ._GraphResolvers import asPage
+# from ._GraphResolvers import asPage
 
-@strawberry.field(
+membership_page = strawberry.field(
     description="Retrieves memberships",
-    permission_classes=[OnlyForAuthentized])
-@asPage
-async def membership_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: Optional[MembershipInputWhereFilter]= None
-    ) -> List[MembershipGQLModel]: 
-    return getLoader(info).memberships
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.MembershipModel.resolve_page(MembershipGQLModel, WhereFilterModel=MembershipInputWhereFilter)
+)
 
-@strawberry.field(
+membership_by_id = strawberry.field(
     description="Retrieves the membership",
-    permission_classes=[OnlyForAuthentized])
-async def membership_by_id(
-    self, info: strawberry.types.Info, id: IDType
-) -> Optional[MembershipGQLModel]:
-    return await MembershipGQLModel.resolve_reference(info, id)
-
-
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.MembershipModel.resolve_by_id(MembershipGQLModel)
+)
 #####################################################################
 #
 # Mutation section
@@ -143,16 +144,18 @@ class MembershipUpdateGQLModel:
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
     changedby: strawberry.Private[IDType] = None
+    group_id: strawberry.Private[IDType] = None
 
 @strawberry.input(description="")
 class MembershipInsertGQLModel:
     user_id: IDType
     group_id: IDType
-    id: Optional[IDType] = None
+    id: Optional[IDType] = strawberry.field(description="Primary key of entity", default_factory=uuid.uuid1)
     valid: Optional[bool] = True
     startdate: Optional[datetime.datetime] = None
     enddate: Optional[datetime.datetime] = None
     createdby: strawberry.Private[IDType] = None
+    
 
 @strawberry.type(description="")
 class MembershipResultGQLModel:
@@ -166,7 +169,11 @@ class MembershipResultGQLModel:
     
 class UpdateMembershipPermission(RBACPermission):
     message = "User is not allowed to change membership"
-    async def has_permission(self, source, info: strawberry.types.Info, membership: "MembershipInsertGQLModel") -> bool:
+    async def has_permission(self, source, info: strawberry.types.Info, membership: "MembershipUpdateGQLModel") -> bool:
+        loader = MembershipGQLModel.getLoader(info)
+        row = await loader.load(membership.id)
+        membership.group_id = row.group_id
+
         adminRoleNames = ["administrátor"]
         allowedRoleNames = ["garant"]
         role = await self.resolveUserRole(info, 
@@ -194,16 +201,7 @@ async def membership_update(self,
     info: strawberry.types.Info, 
     membership: "MembershipUpdateGQLModel"
 ) -> "MembershipResultGQLModel":
-    user = getUserFromInfo(info)
-    membership.changedby = user["id"]
-    loader = getLoader(info).memberships
-    updatedrow = await loader.update(membership)
-
-    result = MembershipResultGQLModel()
-    result.id = membership.id
-    result.msg = "fail" if updatedrow is None else "ok"
-    
-    return result
+    return await encapsulateUpdate(info, MembershipGQLModel.getLoader(info), membership, MembershipResultGQLModel(id=membership.id, msg="ok"))
 
 class InsertMembershipPermission(RBACPermission):
     message = "User is not allowed create new membership"
@@ -228,14 +226,4 @@ async def membership_insert(self,
     info: strawberry.types.Info, 
     membership: "MembershipInsertGQLModel"
 ) -> "MembershipResultGQLModel":
-    user = getUserFromInfo(info)
-    membership.createdby = user["id"]
-    
-    loader = getLoader(info).memberships
-    row = await loader.insert(membership)
-
-    result = MembershipResultGQLModel()
-    result.msg = "ok"
-    result.id = row.id
-    
-    return result
+    return await encapsulateInsert(info, MembershipGQLModel.getLoader(info), membership, MembershipResultGQLModel(id=membership.id, msg="ok"))

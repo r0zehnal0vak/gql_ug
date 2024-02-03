@@ -27,6 +27,7 @@ from ._GraphResolvers import (
 from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
+from src.DBResolvers import DBResolvers
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".userGQLModel")]
@@ -39,7 +40,7 @@ RoleTypeGQLModel = Annotated["RoleTypeGQLModel", strawberry.lazy(".roleTypeGQLMo
 class RoleGQLModel(BaseGQLModel):
     @classmethod
     def getLoader(cls, info):
-        return getLoader(info).roles
+        return getLoader(info).RoleModel
 
     id = resolve_id
     changedby = resolve_changedby
@@ -47,47 +48,53 @@ class RoleGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(
+    valid = strawberry.field(
         description="""If an user has still this role""",
-        permission_classes=[OnlyForAuthentized])
-    def valid(self) -> bool:
-        return self.valid
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.valid
+    )
 
-    @strawberry.field(
+    startdate = strawberry.field(
         description="""When an user has got this role""",
-        permission_classes=[OnlyForAuthentized])
-    def startdate(self) -> Union[str, None]:
-        return self.startdate
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.startdate
+    )
+    
+    enddate = strawberry.field(
         description="""When an user has been removed from this role""",
-        permission_classes=[OnlyForAuthentized])
-    def enddate(self) -> Union[str, None]:
-        return self.enddate
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.enddate
+    )
+   
+    roletype = strawberry.field(
         description="""Role type (like Dean)""",
-        permission_classes=[OnlyForAuthentized])
-    async def roletype(self, info: strawberry.types.Info) -> Optional[RoleTypeGQLModel]:
-        # result = await resolveRoleTypeById(session,  self.roletype_id)
-        result = await src.GraphTypeDefinitions.RoleTypeGQLModel.resolve_reference(info, self.roletype_id)
-        return result
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.roletype(RoleTypeGQLModel)
+    )
+    
+    user = strawberry.field(
         description="""User having this role. Must be member of group?""",
-        permission_classes=[OnlyForAuthentized])
-    async def user(self, info: strawberry.types.Info) -> Optional[UserGQLModel]:
-        # result = await resolveUserById(session,  self.user_id)
-        result = await src.GraphTypeDefinitions.UserGQLModel.resolve_reference(info, self.user_id)
-        return result
-
-    @strawberry.field(
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.user(UserGQLModel)
+    )
+   
+    group = strawberry.field(
         description="""Group where user has a role name""",
-        permission_classes=[OnlyForAuthentized])
-    async def group(self, info: strawberry.types.Info) -> Optional[GroupGQLModel]:
-        # result = await resolveGroupById(session,  self.group_id)
-        result = await src.GraphTypeDefinitions.GroupGQLModel.resolve_reference(info, self.group_id)
-        return result
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleModel.group(GroupGQLModel)
+    )
     
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
     @strawberry.field(
@@ -126,19 +133,18 @@ class RoleInputWhereFilter:
     description="",
     permission_classes=[OnlyForAuthentized])
 async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
-    loader = getLoader(info).roles
+    loader = RoleGQLModel.getLoader(info)
     rows = await loader.filter_by(user_id=user_id)
     return rows
 
 
-from ._GraphResolvers import asPage
-@strawberry.field(
+role_page = strawberry.field(
     description="",
-    permission_classes=[OnlyForAuthentized])
-@asPage
-async def role_page(self, info: strawberry.types.Info, where: Optional[RoleInputWhereFilter] = None) -> List["RoleGQLModel"]:
-    loader = getLoader(info).roles
-    return loader
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.RoleModel.resolve_page(RoleGQLModel, WhereFilterModel=RoleInputWhereFilter)
+)
 
 from src.DBDefinitions import (
     UserModel, MembershipModel, GroupModel, RoleModel
@@ -147,7 +153,8 @@ from sqlalchemy import select
 
 async def resolve_roles_on_user(self, info: strawberry.types.Info, user_id: IDType) -> List["RoleGQLModel"]:
     # ve vsech skupinach, kde je user clenem najdi vsechny role a ty vrat
-    loaderm = getLoader(info).memberships
+    from .membershipGQLModel import MembershipGQLModel
+    loaderm = MembershipGQLModel.getLoader(info)
     rows = await loaderm.filter_by(user_id = user_id)
     groupids = [row.group_id for row in rows]
     # print("groupids", groupids)
@@ -155,20 +162,20 @@ async def resolve_roles_on_user(self, info: strawberry.types.Info, user_id: IDTy
         select(RoleModel).
         where(RoleModel.group_id.in_(groupids))
     )
-    loader = getLoader(info).roles
+    loader = RoleGQLModel.getLoader(info)
     rows = await loader.execute_select(stmt)
     return rows
 
 
 async def resolve_roles_on_group(self, info: strawberry.types.Info, group_id: IDType) -> List["RoleGQLModel"]:
     # najdi vsechny role pro skupinu a nadrizene skupiny
-    grouploader = getLoader(info).groups
+    from .groupGQLModel import GroupGQLModel
+    grouploader = GroupGQLModel.getLoader(info)
     groupids = []
     cid = group_id
     while cid is not None:
         row = await grouploader.load(cid)
-        if row is None:
-            break
+        if row is None: break
         groupids.append(row.id)
         cid = row.mastergroup_id
     # print("groupids", groupids)
@@ -236,11 +243,11 @@ class RoleInsertGQLModel:
 
 @strawberry.type(description="")
 class RoleResultGQLModel:
-    id: IDType = None
+    id: Optional[IDType] = None
     msg: str = None
 
     @strawberry.field(description="""Result of user operation""")
-    async def role(self, info: strawberry.types.Info) -> Union[RoleGQLModel, None]:
+    async def role(self, info: strawberry.types.Info) -> Optional[RoleGQLModel]:
         result = await RoleGQLModel.resolve_reference(info, self.id)
         return result
     
@@ -249,8 +256,10 @@ class UpdateRolePermission(RBACPermission):
     async def has_permission(self, source, info: strawberry.types.Info, role: RoleUpdateGQLModel) -> bool:
         adminRoleNames = ["administrátor"]
         allowedRoleNames = ["garant"]
+        loader = RoleGQLModel.getLoader(info)
+        rolerow = await loader.load(role.id)
         _role = await self.resolveUserRole(info, 
-            rbacobject=role.id, 
+            rbacobject=rolerow.group_id, 
             adminRoleNames=adminRoleNames, 
             allowedRoleNames=allowedRoleNames)
         
@@ -267,15 +276,15 @@ async def role_update(self,
     info: strawberry.types.Info, 
     role: RoleUpdateGQLModel
 ) -> RoleResultGQLModel:
-    return await encapsulateUpdate(info, RoleGQLModel.getLoader(info), role, RoleResultGQLModel(msg="ok", id=None))
+    return await encapsulateUpdate(info, RoleGQLModel.getLoader(info), role, RoleResultGQLModel(msg="ok", id=role.id))
 
 class InsertRolePermission(RBACPermission):
-    message = "User is not allowed create new membership"
+    message = "User is not allowed create new role"
     async def has_permission(self, source, info: strawberry.types.Info, role: RoleInsertGQLModel) -> bool:
         adminRoleNames = ["administrátor"]
         allowedRoleNames = ["garant"]
         _role = await self.resolveUserRole(info, 
-            rbacobject=role.id, 
+            rbacobject=role.group_id, 
             adminRoleNames=adminRoleNames, 
             allowedRoleNames=allowedRoleNames)
         

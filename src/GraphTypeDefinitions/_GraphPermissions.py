@@ -326,17 +326,33 @@ class OnlyForAuthentized(strawberry.permission.BasePermission):
 
 class RBACPermission(BasePermission):
     _allRoles = None
+    # @classmethod
+    # def getAllRoles(cls):
+    #     if cls._allRoles is not None:
+    #         return cls._allRoles
+    #     from ..DBDefinitions import RoleTypeModel, startSyncEngine
+    #     statement = select(RoleTypeModel)
+    #     sessionMaker = startSyncEngine()
+    #     with sessionMaker() as session:
+    #         rows = session.execute(statement)
+    #         result = [{"id": r.id, "name": r.name, "name_en": r.name_en} for r in rows.scalars()]
+    #         cls._allRoles = result
+    #     return result
+
     @classmethod
-    def getAllRoles(cls):
+    async def getAllRoles(cls, info: strawberry.types.Info):
         if cls._allRoles is not None:
             return cls._allRoles
-        from ..DBDefinitions import RoleTypeModel, startSyncEngine
-        statement = select(RoleTypeModel)
-        sessionMaker = startSyncEngine()
-        with sessionMaker() as session:
-            rows = session.execute(statement)
-            result = [{"id": r.id, "name": r.name, "name_en": r.name_en} for r in rows.scalars()]
-            cls._allRoles = result
+        from ..DBDefinitions import RoleTypeModel, startEngine
+        from ..Dataloaders import getLoadersFromInfo
+        loader = getLoadersFromInfo(info).RoleTypeModel
+        roles = await loader.page(limit=1000)
+        
+        result = [{"id": r.id, "name": r.name, "name_en": r.name_en} for r in roles]
+        assert len(result) > 1, f"are roletypes initialized {result}?"
+        cls._allRoles = result
+
+        logging.info(f"loaded all roles {result}")
         return result
 
     async def getUserRoles(self, info: strawberry.types.Info):
@@ -345,10 +361,21 @@ class RBACPermission(BasePermission):
         userroles = user.get("roles")
         if userroles is None:
             loader = RoleGQLModel.getLoader(info)
-            rolerows = await loader.filter_by(user_id=self.id)
-            
-            allRoles = RBACPermission.getAllRoles()
-            indexedRoleTypes = {"id": r for r in allRoles}
+            rolerows = await loader.filter_by(user_id=user["id"])
+            rolerows = list(rolerows)
+
+            ur = [
+                {
+                    "id": rolerow.id,
+                    "group_id": rolerow.group_id,
+                    "user_id": rolerow.user_id,
+                    "roletype_id": rolerow.roletype_id
+                } 
+                for rolerow in rolerows
+            ]
+            logging.info(f"user {user['id']} has roles {ur}")
+            allRoles = await RBACPermission.getAllRoles(info)
+            indexedRoleTypes = {r["id"]: r for r in allRoles}
 
             userroles = [
                 {
@@ -358,21 +385,22 @@ class RBACPermission(BasePermission):
                     "roletype_id": rolerow.roletype_id,
                     "type": indexedRoleTypes[rolerow.roletype_id]
                 } 
-                for rolerow in rolerows]
+                for rolerow in rolerows if indexedRoleTypes.get(rolerow.roletype_id, None) is not None]
             # write back to context and cache it for next use in current request
+            logging.info(f"user {user['id']} has roles {userroles}")
             user["roles"] = userroles
         return userroles
         
 
-    async def getRoles(self, source: Any, info: strawberry.types.Info): 
+    async def getRoles_(self, rbacobject: Any, info: strawberry.types.Info): 
         "returns roles related to source"
         from .RBACObjectGQLModel import RBACObjectGQLModel
-        assert hasattr(source, "rbacobject"), f"missing rbacobject on {source}"
+        # assert hasattr(source, "rbacobject"), f"missing rbacobject on {source}"
         
-        rbacobject = source.rbacobject
+        # rbacobject = source.rbacobject
         
         #rbacobject
-        assert rbacobject is not None, f"RoleBasedPermission cannot be used on {source} as it has None value"
+        assert rbacobject is not None, f"RoleBasedPermission cannot be used, rbacobject has None value"
         # rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
 
         ## zjistime, jake role jsou vztazeny k rbacobject 
@@ -381,9 +409,12 @@ class RBACPermission(BasePermission):
         authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)           
         return authorizedroles
     
-    async def getActiveRoles(self, source: Any, info: strawberry.types.Info):
+    async def getActiveRoles(self, rbacobject: Any, info: strawberry.types.Info):
         "returns roles related to source which has logged user"
-        authorizedroles = await self.getRoles(source, info)
+        from .RBACObjectGQLModel import RBACObjectGQLModel
+        
+        authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)           
+
         user = getUserFromInfo(info)
         # logging.info(f"RolebasedPermission.authorized user {user}")
         user_id = user["id"]
@@ -427,7 +458,9 @@ class OnlyForAdmins(RBACPermission):
         adminRoleNames = ["administrátor"]
         adminrole = await self.testIsAdmin(info, adminRoleNames=adminRoleNames)
         
-        if not adminrole: return False
+        if not adminrole: 
+            logging.info(f"user has no admin role")
+            return False
         return True
 
 class AlwaysFailPermission(RBACPermission):

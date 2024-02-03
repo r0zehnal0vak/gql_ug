@@ -11,19 +11,26 @@ from ._GraphPermissions import (
     RBACPermission
 )
 from src.Dataloaders import (
-    getLoadersFromInfo as getLoader,
+    getLoadersFromInfo,
     getUserFromInfo)
+from src.DBResolvers import DBResolvers
 
 RoleTypeGQLModel = Annotated["RoleTypeGQLModel", strawberry.lazy(".roleTypeGQLModel")]
 
+class RoleTypeListGQLModel:
+    @classmethod
+    def getLoader(cls, info: strawberry.types.Info):
+        return getLoadersFromInfo(info).RoleTypeListModel
+    
+    pass
 
 async def resolve_role_type_list_by_id(
     self, info: strawberry.types.Info, list_id: IDType
 ) -> List["RoleTypeGQLModel"]:
-    print("resolve_role_type_list_by_id", list_id)
-    loader = getLoader(info).roletypelists
+    # print("resolve_role_type_list_by_id", list_id)
+    loader = RoleTypeListGQLModel.getLoader(info)
     roles = await loader.filter_by(list_id=list_id)
-    print("resolve_role_type_list_by_id", list_id)
+    # print("resolve_role_type_list_by_id", list_id)
     return roles  
 
 @strawberry.field(
@@ -79,7 +86,7 @@ async def role_type_list_add(
     self, info: strawberry.types.Info, role_type_list_id: IDType, role_type_id: IDType
 ) -> "RoleTypeListResult":
     
-    loader = getLoader(info).roletypelists
+    loader = RoleTypeListGQLModel.getLoader(info)
     roles = await loader.filter_by(list_id=role_type_list_id)
     roles = [*roles]
     
@@ -109,7 +116,8 @@ class RoleTypeDeleteFormList:
 async def role_type_list_remove(
     self, info: strawberry.types.Info, role_type_list_id: IDType, role_type_id: IDType
 ) -> List["RoleTypeListResult"]:
-    loader = getLoader(info).roletypelists
+   
+    loader = RoleTypeListGQLModel.getLoader(info)
     roles = loader.filter_by(list_id=id)
     roles = [*roles]
     isIn = next(filter(lambda row: (row.type_id == role_type_id), roles), None)

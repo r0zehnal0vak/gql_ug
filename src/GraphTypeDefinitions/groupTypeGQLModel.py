@@ -1,7 +1,7 @@
 import datetime
 import strawberry
 import uuid
-from typing import List, Optional, Union, Annotated
+from typing import List, Optional, Union, Annotated, ForwardRef
 from uoishelpers.resolvers import createInputs
 
 from .BaseGQLModel import BaseGQLModel, IDType
@@ -27,10 +27,13 @@ from ._GraphResolvers import (
 from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
+from src.DBResolvers import DBResolvers
 
 GroupGQLModel = Annotated["GroupGQLModel", strawberry.lazy(".groupGQLModel")]
 GroupCategoryGQLModel = Annotated["GroupCategoryGQLModel", strawberry.lazy(".groupCategoryGQLModel")]
 RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
+
+# GroupTypeGQLModelResolvers = DBResolvers.GroupTypeModel(ForwardRef("GroupTypeGQLModel"))
 
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a group type (like Faculty)"""
@@ -38,7 +41,8 @@ RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjec
 class GroupTypeGQLModel(BaseGQLModel):
     @classmethod
     def getLoader(cls, info):
-        return getLoader(info).grouptypes
+        # return getLoader(info).grouptypes
+        return getLoader(info).GroupTypeModel
         
     id = resolve_id
     name = resolve_name
@@ -48,30 +52,27 @@ class GroupTypeGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(
-        description="""List of groups which have this type""",
-        permission_classes=[OnlyForAuthentized])
-    async def groups(
-        self, info: strawberry.types.Info
-    ) -> List["GroupGQLModel"]:
-        # result = await resolveGroupForGroupType(session,  self.id)
-        loader = getLoader(info).groups
-        result = await loader.filter_by(grouptype_id=self.id)
-        return result
-
-    @strawberry.field(
-        description="",
+    groups = strawberry.field(
+        description="""Groups which has this type""",
         permission_classes=[
             OnlyForAuthentized
-        ]
+        ],
+        resolver=DBResolvers.GroupTypeModel.groups(GroupGQLModel)
     )
-    async def category(self, info: strawberry.types.Info) -> List[GroupCategoryGQLModel]:
-        from .groupCategoryGQLModel import GroupCategoryGQLModel
-        return await GroupCategoryGQLModel.resolve_reference(info, id=self.category_id)
+
+    category = strawberry.field(
+        description="""Group category which this type belongs to""",
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.GroupTypeModel.category(GroupCategoryGQLModel)
+    )
 
     @strawberry.field(
         description="""""",
-        permission_classes=[OnlyForAuthentized])
+        permission_classes=[
+            OnlyForAuthentized
+        ])
     async def rbacobject(self, info: strawberry.types.Info) -> Optional[RBACObjectGQLModel]:
         from .RBACObjectGQLModel import RBACObjectGQLModel
         result = None if self.createdby is None else await RBACObjectGQLModel.resolve_reference(info, self.createdby)
@@ -94,39 +95,24 @@ class GroupTypeInputWhereFilter:
     # from .membershipGQLModel import MembershipInputWhereFilter
     # memberships: MembershipInputWhereFilter
 
-# @strawberry.field(
-#     description="""Returns a list of groups types (paged)""",
-#     permission_classes=[OnlyForAuthentized])
-# async def group_type_page(
-#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 20,
-#     where: Optional[GroupTypeInputWhereFilter] = None
-# ) -> List[GroupTypeGQLModel]:
-#     wheredict = None if where is None else strawberry.asdict(where)
-#     loader = getLoader(info).grouptypes
-#     result = await loader.page(skip, limit, where=wheredict)
-#     return result
+# from ._GraphResolvers import asPage
 
-from ._GraphResolvers import asPage
 
-@strawberry.field(
+group_type_page = strawberry.field(
     description="""Returns a list of groups types (paged)""",
-    permission_classes=[OnlyForAuthentized])
-@asPage
-async def group_type_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 20,
-    where: Optional[GroupTypeInputWhereFilter] = None
-) -> List[GroupTypeGQLModel]:
-    return GroupTypeGQLModel.getLoader(info)
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.GroupTypeModel.resolve_page(GroupTypeGQLModel, WhereFilterModel=GroupTypeInputWhereFilter)
+)
 
-@strawberry.field(
+group_type_by_id = strawberry.field(
     description="""Finds a group type by its id""",
-    permission_classes=[OnlyForAuthentized])
-async def group_type_by_id(
-    self, info: strawberry.types.Info, id: IDType
-) -> Union[GroupTypeGQLModel, None]:
-    # result = await resolveGroupTypeById(session,  id)
-    result = await GroupTypeGQLModel.resolve_reference(info, id)
-    return result
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.GroupTypeModel.resolve_by_id(GroupTypeGQLModel)
+)
 
 #####################################################################
 #
@@ -167,7 +153,7 @@ class GroupTypeResultGQLModel:
         OnlyForAdmins
     ])
 async def group_type_update(self, info: strawberry.types.Info, group_type: GroupTypeUpdateGQLModel) -> GroupTypeResultGQLModel:
-    return encapsulateUpdate(info, GroupTypeGQLModel.getLoader(info), group_type, GroupTypeResultGQLModel(id=group_type.id, msg="ok"))
+    return await encapsulateUpdate(info, GroupTypeGQLModel.getLoader(info), group_type, GroupTypeResultGQLModel(id=group_type.id, msg="ok"))
 
 @strawberry.mutation(
     description="""Inserts a group""",

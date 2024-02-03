@@ -44,16 +44,18 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 dbInitIsDone = False
 
-def startSyncEngine(connectionString=None) -> Session:
-    if connectionString is None:
-        connectionString = ComposeConnectionString()
-    syncEngine = create_engine(connectionString)
+def startSyncEngine(connectionstring=None) -> Session:
+    if connectionstring is None:
+        connectionstring = ComposeConnectionString()
+    syncEngine = create_engine(connectionstring)
     sessionMaker = sessionmaker(syncEngine, expire_on_commit=False)
     assert dbInitIsDone == True, "Seems DB has not been initialized"
     return sessionMaker
 
 
-async def startEngine(connectionstring, makeDrop=False, makeUp=True) -> AsyncSession:
+async def startEngine(connectionstring=None, makeDrop=False, makeUp=True) -> AsyncSession:
+    if connectionstring is None:
+        connectionstring = ComposeConnectionString()
     global dbInitIsDone
     """Provede nezbytne ukony a vrati asynchronni SessionMaker"""
     asyncEngine = create_async_engine(connectionstring, pool_pre_ping=True)
@@ -71,8 +73,8 @@ async def startEngine(connectionstring, makeDrop=False, makeUp=True) -> AsyncSes
                 print(e)
                 print("Unable automaticaly create tables")
                 return None
-    dbInitIsDone = False
-
+    dbInitIsDone = True
+    
     async_sessionMaker = sessionmaker(
         asyncEngine, expire_on_commit=False, class_=AsyncSession
     )

@@ -20,13 +20,14 @@ test_membership_reference = createResolveReferenceTest(tableName="memberships", 
 test_membership_larger = createFrontendQuery(query="""query($id: UUID!){
   userById(id: $id) {
     id
-    membership {
+    memberships {
       id
       valid
       user { id }   
       group { id }
       startdate
       enddate
+      rbacobject { id }
     }
   }
 }""", variables={"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"})

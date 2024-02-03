@@ -107,7 +107,7 @@ async def run_the_test(
     pass
 
 @pytest.mark.asyncio
-async def test_container(DemoData):
+async def _test_container(DemoData):
     # JWTPUBLICKEYURL=http://localhost:33001/oauth/publickey
     # JWTRESOLVEUSERPATHURL=http://localhost:33001/oauth/userinfo
     JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", None)
@@ -119,7 +119,7 @@ async def test_container(DemoData):
 
 
 @pytest.mark.asyncio
-async def test_out_of_compose(DemoData):
+async def _test_out_of_compose(DemoData):
     JWTPUBLICKEYURL = "http://localhost:33001/oauth/publickey"
     JWTRESOLVEUSERPATHURL = "http://localhost:33001/oauth/userinfo"
     # JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", None)

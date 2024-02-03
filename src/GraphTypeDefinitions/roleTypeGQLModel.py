@@ -27,8 +27,10 @@ from ._GraphResolvers import (
 from src.Dataloaders import (
     getLoadersFromInfo as getLoader,
     getUserFromInfo)
+from src.DBResolvers import DBResolvers
 
 RoleGQLModel = Annotated["RoleGQLModel", strawberry.lazy(".roleGQLModel")]
+RoleInputWhereFilter = Annotated["RoleInputWhereFilter", strawberry.lazy(".roleGQLModel")]
 RoleCategoryGQLModel = Annotated["RoleCategoryGQLModel", strawberry.lazy(".roleCategoryGQLModel")]
 
 @strawberry.federation.type(
@@ -37,7 +39,7 @@ RoleCategoryGQLModel = Annotated["RoleCategoryGQLModel", strawberry.lazy(".roleC
 class RoleTypeGQLModel(BaseGQLModel):
     @classmethod
     def getLoader(cls, info):
-        return getLoader(info).roletypes
+        return getLoader(info).RoleTypeModel
 
     id = resolve_id
     name = resolve_name
@@ -47,24 +49,21 @@ class RoleTypeGQLModel(BaseGQLModel):
     lastchange = resolve_lastchange
     createdby = resolve_createdby
 
-    @strawberry.field(
+    roles = strawberry.field(
         description="""List of roles with this type""",
-        permission_classes=[OnlyForAuthentized])
-    async def roles(self, info: strawberry.types.Info) -> List["RoleGQLModel"]:
-        # result = await resolveRoleForRoleType(session,  self.id)
-        from .roleGQLModel import RoleGQLModel
-        loader = RoleGQLModel.getLoader(info)
-        result = await loader.filter_by(roletype_id=self.id)
-        return result
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleTypeModel.roles(RoleGQLModel, WhereFilterModel=RoleInputWhereFilter)
+    )
 
-    @strawberry.field(
-        description="""List of roles with this type""",
-        permission_classes=[OnlyForAuthentized])
-    async def category(self, info: strawberry.types.Info) -> Optional["RoleCategoryGQLModel"]:
-        # result = await resolveRoleForRoleType(session,  self.id)
-        from .roleCategoryGQLModel import RoleCategoryGQLModel
-        result = await RoleCategoryGQLModel.resolve_reference(info, id=self.category_id)
-        return result
+    category = strawberry.field(
+        description="""Get role category of this role type""",
+        permission_classes=[
+            OnlyForAuthentized
+        ],
+        resolver=DBResolvers.RoleTypeModel.category(RoleCategoryGQLModel)
+    )
 
     RBACObjectGQLModel = Annotated["RBACObjectGQLModel", strawberry.lazy(".RBACObjectGQLModel")]
     @strawberry.field(
@@ -90,42 +89,22 @@ class RoleTypeInputWhereFilter:
     from .roleGQLModel import RoleInputWhereFilter
     roles: RoleInputWhereFilter
 
-@strawberry.field(
+role_type_by_id = strawberry.field(
     description="""Finds a role type by its id""",
-    permission_classes=[OnlyForAuthentized])
-async def role_type_by_id(
-    self, info: strawberry.types.Info, id: IDType
-) -> Union[RoleTypeGQLModel, None]:
-    result = await RoleTypeGQLModel.resolve_reference(info, id)
-    return result
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.RoleTypeModel.resolve_by_id(RoleTypeGQLModel)
+)
 
-# @strawberry.field(
-#     description="""Finds all roles types paged""",
-#     permission_classes=[OnlyForAuthentized])
-# async def role_type_page(
-#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-#     where: Optional[RoleTypeInputWhereFilter] = None
-# ) -> List[RoleTypeGQLModel]:
-#     wheredict = None if where is None else strawberry.asdict(where)
-#     # result = await resolveRoleTypeAll(session,  skip, limit)
-#     loader = getLoader(info).roletypes
-#     result = await loader.page(skip, limit, where=wheredict)
-#     return result
-    
+role_type_page = strawberry.field(
+    description="""Finds all role types paged""",
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.RoleTypeModel.resolve_page(RoleTypeGQLModel, WhereFilterModel=RoleTypeInputWhereFilter)
+)
 
-from ._GraphResolvers import asPage
-
-@strawberry.field(
-    description="""Finds all roles types paged""",
-    permission_classes=[OnlyForAuthentized])
-@asPage
-async def role_type_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: Optional[RoleTypeInputWhereFilter] = None
-) -> List[RoleTypeGQLModel]:
-    loader = getLoader(info).roletypes
-    return loader
-    
 #####################################################################
 #
 # Mutation section

@@ -22,8 +22,9 @@ class GroupTypeModel(BaseModel):
     name_en = Column(String, comment="english name of the type")
 
     category_id = Column(ForeignKey("groupcategories.id"), index=True)
-    
+
     groups = relationship("GroupModel", back_populates="grouptype")
+    category = relationship("GroupCategoryModel", viewonly=True)
 
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="when record has been created")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp")

@@ -26,7 +26,8 @@ def DBModels():
         RoleTypeModel,
         RoleCategoryModel,
         MembershipModel,
-        RoleTypeListModel
+        RoleTypeListModel,
+        GroupCategoryModel
     )
     ##
     # order is important!
@@ -34,6 +35,7 @@ def DBModels():
     return  [
         RoleCategoryModel,
         RoleTypeModel,
+        GroupCategoryModel,
         GroupTypeModel,
         UserModel,
         GroupModel,
@@ -126,6 +128,7 @@ def Info(Request, Context):
         def context(self):
             context = Context
             context["request"] = Request
+            context["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
             return context
 
     return _Info()
@@ -167,6 +170,8 @@ def QueriesFile():
 def DemoTrue(monkeypatch):
     print("setting env DEMO to True")
     monkeypatch.setenv("DEMO", "True")
+    monkeypatch.setenv("DEMODATA", "True")
+    # monkeypatch.setenv("DEMO", "True")
     # import main
     # main.DEMO = True
     yield

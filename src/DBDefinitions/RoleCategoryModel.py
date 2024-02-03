@@ -21,6 +21,8 @@ class RoleCategoryModel(BaseModel):
     name = Column(String, comment="name of the category (category groups types)")
     name_en = Column(String, comment="english name of the category (category groups types)")
 
+    roletypes = relationship("RoleTypeModel", viewonly=True)
+
     created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="when record has been created")
     lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp")
     createdby = UUIDFKey(nullable=True, comment="who has created this record")#Column(ForeignKey("users.id"), index=True, nullable=True)

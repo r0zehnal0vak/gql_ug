@@ -2,7 +2,7 @@
 
 ### Basic functional tests
 ```bash
-pytest --cov-report term-missing --cov=gql_ug tests --log-cli-level=INFO -x
+pytest --cov-report term-missing --cov=src tests --log-cli-level=INFO -x
 ```
 
 ### Tests for integration

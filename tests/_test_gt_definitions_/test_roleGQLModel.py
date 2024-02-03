@@ -40,6 +40,7 @@ test_role_insert = createFrontendQuery(query="""mutation($id: UUID!, $userId: UU
         roletype { id }
         user { id }
         group { id }
+        rbacobject { id }
     }
   }
 }""", variables={

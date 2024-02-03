@@ -260,7 +260,11 @@
             "mastergroup_id": "2d9dced0-a4a2-11ed-b9df-0242ac120003"
         }
     ],
-
+    "roletypelists": [
+        {
+            "id": "84235021-7e50-402e-946e-7f6b455821e4"
+        }
+    ],
     "roles": [
         {
             "id": "564b62f4-29f6-48b2-8bc8-ff52c800732a",

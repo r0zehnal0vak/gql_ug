@@ -48,7 +48,7 @@ test_user_larger = createFrontendQuery(query="""query($id: UUID!){
     surname
     fullname
     email
-    membership {
+    memberships {
       id
       valid
     }
@@ -58,5 +58,16 @@ test_user_larger = createFrontendQuery(query="""query($id: UUID!){
     }
     createdby { id }
     changedby { id }
+    rbacobject { id }
   }
 }""", variables={"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"})
+
+test_user_me = createFrontendQuery(query="""{
+  me {
+    id
+    name
+    surname
+    fullname
+    email
+  }
+}""", variables={})

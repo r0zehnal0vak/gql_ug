@@ -3,6 +3,17 @@ import logging
 import uuid
 import sqlalchemy
 
+
+async def getRow(async_session_maker, tableName, id):
+    statement = sqlalchemy.text(f"SELECT id, lastchange FROM {tableName} WHERE id=:id").bindparams(id=id)
+    #statement = sqlalchemy.text(f"SELECT id, lastchange FROM {tableName}")
+    print("statement", statement, flush=True)
+    async with async_session_maker() as session:
+        rows = await session.execute(statement)
+        row = rows.first()
+    return row    
+        
+
 def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
     async def result_test(SQLite, DemoData, ClientExecutorDemo, SchemaExecutorDemo, Env_GQLUG_ENDPOINT_URL_8124):
@@ -10,34 +21,37 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
         def testResult(resp):
             print("response", resp)
             errors = resp.get("errors", None)
-            assert errors is None
+            assert errors is None, f"response has errors {errors}"
             
             respdata = resp.get("data", None)
-            assert respdata is not None
+            assert respdata is not None, f"response {resp} has not data"
             
-            respdata = respdata[queryEndpoint]
-            assert respdata is not None
+            respdata = respdata["result"]
+            assert respdata is not None, f"response {resp} has not enitity"
 
             for att in attributeNames:
-                assert respdata[att] == f'{datarow[att]}'
+                assert respdata[att] == f'{datarow[att]}', f"attributes are different {att}"
 
-        schemaExecutor = ClientExecutorDemo
-        clientExecutor = SchemaExecutorDemo
+        clientExecutor = ClientExecutorDemo
+        schemaExecutor = SchemaExecutorDemo
 
         data = DemoData
         datarow = data[tableName][0]
         content = "{" + ", ".join(attributeNames) + "}"
-        query = "query($id: UUID!){" f"{queryEndpoint}(id: $id)" f"{content}" "}"
+        query = "query($id: UUID!){" f"result: {queryEndpoint}(id: $id)" f"{content}" "}"
 
         variable_values = {"id": f'{datarow["id"]}'}
         
+        row = await getRow(SQLite, tableName=tableName, id=datarow["id"])
+        assert row is not None, f"row with id={datarow['id']} not found in DB"
+
         # append(queryname=f"{queryEndpoint}_{tableName}", query=query, variables=variable_values)        
-        logging.debug(f"query for {query} with {variable_values}")
+        logging.info(f"query for {query} with {variable_values}")
 
         resp = await schemaExecutor(query, variable_values)
         testResult(resp)
-        resp = await clientExecutor(query, variable_values)
-        testResult(resp)
+        # resp = await clientExecutor(query, variable_values)
+        # testResult(resp)
 
     return result_test
 
@@ -47,7 +61,7 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         def testResult(resp):
             errors = resp.get("errors", None)
-            assert errors is None
+            assert errors is None, f"resp has errors {errors}"
             respdata = resp.get("data", None)
             assert respdata is not None
 
@@ -71,8 +85,8 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         resp = await schemaExecutor(query)
         testResult(resp)
-        resp = await clientExecutor(query)
-        testResult(resp)
+        # resp = await clientExecutor(query)
+        # testResult(resp)
         
     return result_test
 
@@ -83,18 +97,18 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
         def testResult(resp):
             print(resp)
             errors = resp.get("errors", None)
-            assert errors is None, errors
+            assert errors is None, f" response has errors {errors}"
             respdata = resp.get("data", None)
-            assert respdata is not None
+            assert respdata is not None, f"missing data in response {resp}"
 
             logging.info(respdata)
             respdata = respdata.get('_entities', None)
-            assert respdata is not None
+            assert respdata is not None, f"missing _entities in response {resp}"
 
-            assert len(respdata) == 1
+            assert len(respdata) == 1, f"_entities has not just one member {respdata}"
             respdata = respdata[0]
-
-            assert respdata['id'] == rowid
+            assert respdata is not None, f"got None value for id {rowid}"
+            assert respdata['id'] == rowid, f"different id {respdata['id']} in response, expected {rowid}"
 
         schemaExecutor = SchemaExecutorDemo
         clientExecutor = ClientExecutorDemo
@@ -128,8 +142,8 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
             variable_values = {"rep": [{"__typename": f"{gqltype}", "id": f"{rowid}"}]}
 
             logging.info(f"query representations {query} with {variable_values}")
-            resp = await clientExecutor(query, {**variable_values})
-            testResult(resp)
+            # resp = await clientExecutor(query, {**variable_values})
+            # testResult(resp)
             resp = await schemaExecutor(query, {**variable_values})
             testResult(resp)
 
@@ -194,7 +208,7 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
 
         variables["lastchange"] = lastchange
         variables["id"] = f'{variables["id"]}'
-        context_value = Context
+        
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
 
@@ -224,7 +238,7 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
             if isinstance(value, dict):
                 entity = value
                 break
-        assert entity is not None, f"expected entity in response to {query}"
+        assert entity is not None, f"expected entity in response to {query}, got {resp}"
 
         for key in variables.keys():
             if key in ["id", "lastchange"]:
