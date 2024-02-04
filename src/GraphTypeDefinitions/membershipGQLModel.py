@@ -7,6 +7,7 @@ from uoishelpers.resolvers import createInputs
 from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import (
     RoleBasedPermission, OnlyForAuthentized,
+    OnlyForAdmins,
     RBACPermission
 )
 from ._GraphResolvers import (
@@ -19,7 +20,8 @@ from ._GraphResolvers import (
     resolve_createdby,
     
     encapsulateInsert,
-    encapsulateUpdate
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -227,3 +229,12 @@ async def membership_insert(self,
     membership: "MembershipInsertGQLModel"
 ) -> "MembershipResultGQLModel":
     return await encapsulateInsert(info, MembershipGQLModel.getLoader(info), membership, MembershipResultGQLModel(id=membership.id, msg="ok"))
+
+@strawberry.mutation(
+    description="Deletes the membership",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def membership_delete(self, info: strawberry.types.Info, id: IDType) -> MembershipResultGQLModel:
+    return await encapsulateDelete(info, MembershipGQLModel.getLoader(info), id, MembershipResultGQLModel(msg="ok", id=None))

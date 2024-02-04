@@ -463,6 +463,8 @@ class OnlyForAdmins(RBACPermission):
             return False
         return True
 
+
+
 class AlwaysFailPermission(RBACPermission):
 
     async def has_permission(self, source, info: strawberry.types.Info, **kwargs) -> bool:

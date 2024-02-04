@@ -21,7 +21,8 @@ from ._GraphResolvers import (
     resolve_createdby,
 
     encapsulateInsert,
-    encapsulateUpdate
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -193,3 +194,13 @@ async def role_type_insert(self,
 ) -> RoleTypeResultGQLModel:
     #print("role_type_update", role_type, flush=True)
     return await encapsulateInsert(info, RoleTypeGQLModel.getLoader(info), role_type, RoleTypeResultGQLModel(msg="ok", id=None)) 
+
+@strawberry.mutation(
+    description="Deletes the roleType",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def role_type_delete(self, info: strawberry.types.Info, id: IDType) -> RoleTypeResultGQLModel:
+    return await encapsulateDelete(info, RoleTypeGQLModel.getLoader(info), id, RoleTypeResultGQLModel(msg="ok", id=None))
+

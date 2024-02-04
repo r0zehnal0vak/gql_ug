@@ -10,6 +10,7 @@ from ._GraphPermissions import (
     RBACPermission,
     RoleBasedPermission, 
     OnlyForAuthentized,
+    OnlyForAdmins,
     InsertRBACPermission,
     AlwaysFailPermission
     )
@@ -25,7 +26,8 @@ from ._GraphResolvers import (
     # asPage,
 
     encapsulateInsert,
-    encapsulateUpdate
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -54,7 +56,7 @@ class GroupInputWhereFilter:
     enddate: datetime.datetime
     grouptype: GroupTypeInputWhereFilter
     roles: RoleInputWhereFilter
-    
+
 GroupGQLModel_description = """
 ## Description
 
@@ -385,6 +387,17 @@ class InsertGroupPermission(RBACPermission):
 async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLModel) -> Optional[GroupResultGQLModel]:
     group.rbacobject = group.id
     return await encapsulateInsert(info, GroupGQLModel.getLoader(info), group, GroupResultGQLModel(id=group.id, msg="ok"))
+
+
+@strawberry.mutation(
+    description="Deletes the group",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def group_type_delete(self, info: strawberry.types.Info, id: IDType) -> GroupResultGQLModel:
+    return await encapsulateDelete(info, GroupGQLModel.getLoader(info), id, GroupResultGQLModel(msg="ok", id=None))
+
 
 # @strawberry.mutation(
 #     description="""Allows to assign the group to8 specified master group""",

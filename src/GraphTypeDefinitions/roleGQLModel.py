@@ -8,6 +8,7 @@ from .BaseGQLModel import BaseGQLModel, IDType
 from ._GraphPermissions import (
     RoleBasedPermission, 
     OnlyForAuthentized,
+    OnlyForAdmins,
     RBACPermission
 )
 import src.GraphTypeDefinitions
@@ -21,7 +22,8 @@ from ._GraphResolvers import (
     resolve_createdby,
 
     encapsulateInsert,
-    encapsulateUpdate
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -304,3 +306,12 @@ async def role_insert(self,
     role.rbacobject = role.group_id
     return await encapsulateInsert(info, RoleGQLModel.getLoader(info), role, RoleResultGQLModel(msg="ok", id=None))
     
+@strawberry.mutation(
+    description="Deletes the role",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def role_delete(self, info: strawberry.types.Info, id: IDType) -> RoleResultGQLModel:
+    return await encapsulateDelete(info, RoleGQLModel.getLoader(info), id, RoleResultGQLModel(msg="ok", id=None))
+

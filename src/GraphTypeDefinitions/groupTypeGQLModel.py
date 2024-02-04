@@ -21,7 +21,8 @@ from ._GraphResolvers import (
     resolve_createdby,
 
     encapsulateInsert,
-    encapsulateUpdate    
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -163,3 +164,12 @@ async def group_type_update(self, info: strawberry.types.Info, group_type: Group
     ])
 async def group_type_insert(self, info: strawberry.types.Info, group_type: GroupTypeInsertGQLModel) -> GroupTypeResultGQLModel:
     return await encapsulateInsert(info, GroupTypeGQLModel.getLoader(info), group_type, GroupTypeResultGQLModel(id=None, msg="ok"))
+
+@strawberry.mutation(
+    description="Deletes the group type",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def group_type_delete(self, info: strawberry.types.Info, id: IDType) -> GroupTypeResultGQLModel:
+    return await encapsulateDelete(info, GroupTypeGQLModel.getLoader(info), id, GroupTypeResultGQLModel(msg="ok", id=None))

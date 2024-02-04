@@ -21,7 +21,8 @@ from ._GraphResolvers import (
     resolve_createdby,
 
     encapsulateInsert,
-    encapsulateUpdate    
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -159,7 +160,7 @@ class GroupCategoryResultGQLModel:
         return result
     
 @strawberry.mutation(
-    description="""Allows a update of group, also it allows to change the mastergroup of the group""",
+    description="""Allows an update of group category""",
     permission_classes=[
         OnlyForAuthentized,
         OnlyForAdmins
@@ -168,10 +169,20 @@ async def group_category_update(self, info: strawberry.types.Info, group_type: G
     return await encapsulateUpdate(info, GroupCategoryGQLModel.getLoader(info), group_type, GroupCategoryResultGQLModel(id=group_type.id, msg="ok"))
 
 @strawberry.mutation(
-    description="""Inserts a group""",
+    description="""Inserts a group category""",
     permission_classes=[
         OnlyForAuthentized,
         OnlyForAdmins
     ])
 async def group_category_insert(self, info: strawberry.types.Info, group_type: GroupCategoryInsertGQLModel) -> GroupCategoryResultGQLModel:
     return await encapsulateInsert(info, GroupCategoryGQLModel.getLoader(info), group_type, GroupCategoryResultGQLModel(id=None, msg="ok"))
+
+@strawberry.mutation(
+    description="Deletes the group category",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def group_type_delete(self, info: strawberry.types.Info, id: IDType) -> GroupCategoryResultGQLModel:
+    return await encapsulateDelete(info, GroupCategoryGQLModel.getLoader(info), id, GroupCategoryResultGQLModel(msg="ok", id=None))
+

@@ -79,6 +79,15 @@ async def encapsulateInsert(info, loader, entity, result):
     result.id = result.id if result.id else row.id       
     return result   
 
+import sqlalchemy.exc
+
+async def encapsulateDelete(info, loader, id, result):
+    try:
+        await loader.delete(id)
+    except sqlalchemy.exc.IntegrityError as e:
+        result.msg='fail'
+    return result
+
 resolve_result_id: IDType = strawberry.field(description="primary key of CU operation object",
     permission_classes=[OnlyForAuthentized])
 resolve_result_msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.

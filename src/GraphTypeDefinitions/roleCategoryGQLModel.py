@@ -22,7 +22,8 @@ from ._GraphResolvers import (
     resolve_createdby,
 
     encapsulateInsert,
-    encapsulateUpdate    
+    encapsulateUpdate,
+    encapsulateDelete
 )
 
 from src.Dataloaders import (
@@ -180,3 +181,12 @@ async def role_category_insert(self,
 
 ) -> RoleCategoryResultGQLModel:
     return await encapsulateInsert(info, RoleCategoryGQLModel.getLoader(info), role_category, RoleCategoryResultGQLModel(msg="ok", id=None))
+
+@strawberry.mutation(
+    description="Deletes the role category",
+    permission_classes=[
+        OnlyForAuthentized,
+        OnlyForAdmins
+    ])
+async def role_category_delete(self, info: strawberry.types.Info, id: IDType) -> RoleCategoryResultGQLModel:
+    return await encapsulateDelete(info, RoleCategoryGQLModel.getLoader(info), id, RoleCategoryResultGQLModel(msg="ok", id=None))
