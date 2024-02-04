@@ -395,7 +395,7 @@ async def group_insert(self, info: strawberry.types.Info, group: GroupInsertGQLM
         OnlyForAuthentized,
         OnlyForAdmins
     ])
-async def group_type_delete(self, info: strawberry.types.Info, id: IDType) -> GroupResultGQLModel:
+async def group_delete(self, info: strawberry.types.Info, id: IDType) -> GroupResultGQLModel:
     return await encapsulateDelete(info, GroupGQLModel.getLoader(info), id, GroupResultGQLModel(msg="ok", id=None))
 
 

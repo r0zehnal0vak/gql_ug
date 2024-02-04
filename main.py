@@ -145,7 +145,7 @@ app = FastAPI(lifespan=lifespan)
 # app.mount("/gql", graphql_app)
 
 from prometheus_fastapi_instrumentator import Instrumentator
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+Instrumentator().instrument(app, metric_namespace="gql_ug").expose(app, endpoint="/metrics")
 
 graphql_app = GraphQLRouter(
     schema,
@@ -180,7 +180,17 @@ async def apollo_gql(request: Request, item: Item):
     # logging.info(f"schema execute result \n{schemaresult}")
     result = {"data": schemaresult.data}
     if schemaresult.errors:
-        result["errors"] = [{"msg": f"{error}"} for error in schemaresult.errors]
+        result["errors"] = [
+            {
+                "msg": error.message,
+                "locations": error.locations,
+                "path": error.path,
+                "nodes": error.nodes,
+                "source": error.source,
+                "original_error": { "type": f"{type(error.original_error)}", "msg": f"{error.original_error}" },
+                # "msg_r": f"{error}",
+                "msg_e": f"{error}".split('\n')
+            } for error in schemaresult.errors]
     return result
 
 logging.info("All initialization is done")
