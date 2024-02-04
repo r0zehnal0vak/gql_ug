@@ -144,6 +144,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 # app.mount("/gql", graphql_app)
 
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
 graphql_app = GraphQLRouter(
     schema,
     context_getter=get_context
