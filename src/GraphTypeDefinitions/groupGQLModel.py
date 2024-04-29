@@ -86,6 +86,14 @@ class GroupGQLModel(BaseGQLModel):
     def email(self) -> Optional[str]:
         result = None if not self.email else self.email
         return result
+    
+    @strawberry.field(
+        description="""Group's name abbreviation""",
+        permission_classes=[OnlyForAuthentized])
+    def abbreviation(self) -> Optional[str]:
+        result = self.abbreviation
+        return result
+
 
 
     @strawberry.field(
@@ -309,6 +317,8 @@ class GroupUpdateGQLModel:
     grouptype_id: Optional[IDType] = None
     mastergroup_id: Optional[IDType] = None
     valid: Optional[bool] = None
+    abbreviation: Optional[str] = None
+    email: Optional[str] = None
     changedby: strawberry.Private[IDType] = None
 
 
@@ -320,6 +330,8 @@ class GroupInsertGQLModel:
     name_en: Optional[str] = None
     mastergroup_id: Optional[IDType] = None
     valid: Optional[bool] = None
+    abbreviation: Optional[str] = None
+    email: Optional[str] = None
     createdby: strawberry.Private[IDType] = None
     rbacobject: strawberry.Private[IDType] = None
 

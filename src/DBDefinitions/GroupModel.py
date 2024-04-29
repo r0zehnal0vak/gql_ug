@@ -20,6 +20,7 @@ class GroupModel(BaseModel):
     id = UUIDColumn()
     name = Column(String, comment="name of the group")
     name_en = Column(String, comment="english name of the group")
+    abbreviation = Column(String, comment="name abbreviation of the group")
     email = Column(String, comment="can be an email for whole group")
 
     startdate = Column(DateTime, comment="born date of the group")

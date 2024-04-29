@@ -24,23 +24,117 @@
             "id": "53697b35-9f67-41e5-abed-04d7d4865cf2",
             "name": "SCOPUS",
             "name_en": "SCOPUS",
-            "urlformat": "https://scopus.com/%s",
+            "urlformat": "https://scopus.com/authid/detail.uri?origin=resultslist&authorId=%s",
             "category_id": "4061c96c-e1ed-4674-ba21-746cbd149dbf"
         },
         {
+            "id": "cc6f17ad-ec8b-4cd3-ad6e-4a2c5016ab68",
+            "name": "ORCID",
+            "name_en": "ORCID",
+            "urlformat": "https://orcid.org/%s",
+            "category_id": "4061c96c-e1ed-4674-ba21-746cbd149dbf"
+        },
+        {
+            "id": "8409aedc-07b1-4708-8f3a-89936e8cae09",
+            "name": "ResearcheId",
+            "name_en": "ResearcheId",
+            "urlformat": "https://researcherid.org/rid/%s",
+            "category_id": "4061c96c-e1ed-4674-ba21-746cbd149dbf"
+        },
+
+        {
             "id": "d00ec0b6-f27c-497b-8fc8-ddb4e2460717",
-            "name": "VaV",
-            "name_en": "VaV",
-            "urlformat": "",
+            "name": "VaV-User",
+            "name_en": "VaV-User",
+            "urlformat": "https://vav.unob.cz/person/index/%s",
             "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
         },
         {
-            "id": "93a352ea-3bdb-47f5-a120-bcf3c6e44bbf",
-            "name": "UCO",
-            "name_en": "UCO",
-            "urlformat": "",
+            "id": "c6ea6fb8-5063-424d-83f9-aa20c9d31391",
+            "name": "VaV-Group",
+            "name_en": "VaV-Group",
+            "urlformat": "https://vav.unob.cz/department/index/%s",
             "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
         },
+        {
+            "id": "abc0aecc-63e3-4e56-8402-c391214ab1e2",
+            "name": "VaV-Projekt",
+            "name_en": "VaV-Projekt",
+            "urlformat": "https://vav.unob.cz/project/index/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+
+        {
+            "id": "93a352ea-3bdb-47f5-a120-bcf3c6e44bbf",
+            "name": "MojeAP-Učitel",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Vyucujici/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "64141caa-fd90-45b1-ad93-9531b67eef81",
+            "name": "MojeAP-Předmět",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Predmet/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "da032c1e-b7cc-47e2-9d71-aee7591cc159",
+            "name": "MojeAP-Program",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Program/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "c53de8fb-255f-4f1a-977a-e20e83fb769b",
+            "name": "MojeAP-Studijní skupina",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/StudiumSkupina/Uic/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "d5bfe043-f82e-4d24-baa2-524a4f443ed0",
+            "name": "MojeAP-Student",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Student/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "ff11223c-60e1-460e-83db-891413326baf",
+            "name": "MojeAP-Fakulta",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Fakulta/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "4a2544f6-e9c6-4082-b382-68af4a6809f9",
+            "name": "MojeAP-Katedra",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Katedra/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "20eee61b-1a62-42c4-876f-43fdc927cc2b",
+            "name": "MojeAP-Areál",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Areal/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "17cfff19-f162-4af7-ad07-5d83e9228b35",
+            "name": "MojeAP-Budova",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Budova/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+        {
+            "id": "d72e7cb8-bae8-478f-a74e-6d04a9ead24f",
+            "name": "MojeAP-Místnost",
+            "name_en": "UCO",
+            "urlformat": "https://apl.unob.cz/MojeAP/Mistnost/%s",
+            "category_id": "0ee3a92d-971f-499a-956f-ca6edb8d6094"
+        },
+
         {
             "id": "0c37b3e1-a937-4776-9543-37ae846411de",
             "name": "UIC",
