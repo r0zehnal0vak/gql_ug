@@ -38,22 +38,22 @@ def resolve_lastchange(self) -> datetime.datetime:
 def resolve_created(self) -> typing.Optional[datetime.datetime]:
     return self.created
 
-async def resolve_user(user_id):
+async def resolve_user(info, user_id):
     from .userGQLModel import UserGQLModel
-    result = None if user_id is None else await UserGQLModel.resolve_reference(user_id)
+    result = None if user_id is None else await UserGQLModel.resolve_reference(info, user_id)
     return result
     
 @strawberry.field(
     description="""Who created entity""",
     permission_classes=[OnlyForAuthentized])
-async def resolve_createdby(self) -> typing.Optional["UserGQLModel"]:
-    return await resolve_user(self.createdby)
+async def resolve_createdby(self, info: strawberry.types.Info) -> typing.Optional["UserGQLModel"]:
+    return await resolve_user(info, self.createdby)
 
 @strawberry.field(
     description="""Who made last change""",
     permission_classes=[OnlyForAuthentized])
-async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
-    return await resolve_user(self.changedby)
+async def resolve_changedby(self, info: strawberry.types.Info) -> typing.Optional["UserGQLModel"]:
+    return await resolve_user(info, self.changedby)
 
 # @strawberry.field(description="""Who made last change""")
 # async def resolve_rbacobject(self) -> typing.Optional[RBACObjectGQLModel]:
