@@ -42,13 +42,17 @@ class Query:
     group_category_by_id = group_category_by_id
     group_category_page = group_category_page
 
-    from .roleGQLModel import role_by_user
+    from .roleGQLModel import (
+        role_by_user,
+        roles_on_group,
+        roles_on_user,
+        role_page,
+        role_by_id
+    )
+    role_by_id = role_by_id
+    role_page = role_page
     role_by_user = role_by_user
-
-    from .roleGQLModel import roles_on_group
     roles_on_group = roles_on_group
-
-    from .roleGQLModel import roles_on_user
     roles_on_user = roles_on_user
 
     from .RBACObjectGQLModel import rbac_by_id

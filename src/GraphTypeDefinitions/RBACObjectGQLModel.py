@@ -75,7 +75,7 @@ class RBACObjectGQLModel:
         return result
     
 @strawberry.field(
-    description="""Finds a rbasobject by its id""",
+    description="""Finds a rbacobject by its id""",
     permission_classes=[OnlyForAuthentized])
 async def rbac_by_id(
     self, info: strawberry.types.Info, id: IDType

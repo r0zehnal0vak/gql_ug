@@ -1,0 +1,24 @@
+query GroupById($id: UUID!) {
+  result: groupById(id: $id) {
+    ...Group
+  }
+}
+
+fragment Group on GroupGQLModel {
+	__typename
+  id
+  lastchange
+  name
+  nameEn
+  abbreviation
+  
+  created
+  createdby { id email }
+  changedby { id email }
+  
+  email
+  valid
+  grouptype { id name }
+  subgroups { id name }
+  mastergroup { id name }
+}

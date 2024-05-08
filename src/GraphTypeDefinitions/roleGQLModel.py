@@ -139,6 +139,14 @@ async def role_by_user(self, info: strawberry.types.Info, user_id: IDType) -> Li
     rows = await loader.filter_by(user_id=user_id)
     return rows
 
+role_by_id = strawberry.field(
+    description="",
+    permission_classes=[
+        OnlyForAuthentized
+    ],
+    resolver=DBResolvers.RoleModel.resolve_by_id(RoleGQLModel)
+)
+
 
 role_page = strawberry.field(
     description="",

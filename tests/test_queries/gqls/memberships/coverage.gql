@@ -1,0 +1,14 @@
+query MembershipById($id: UUID!) {
+  result: membershipById(id: $id) {
+    ...Membership
+  }
+}
+
+fragment Membership on MembershipGQLModel {
+  __typename
+  id
+  lastchange
+  user { id email }
+  group { id name }
+  rbacobject { id }
+}

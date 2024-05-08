@@ -185,16 +185,16 @@ rolelist = [
 #     pass
 
 import requests
-from src.utils.gql_ug_proxy import createProxy
 
 def ReadAllRoles():
     GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
-    gqlproxy = createProxy(GQLUG_ENDPOINT_URL)
-
     query = """query {roleTypePage(limit: 1000) {id, name, nameEn}}"""
     variables = {}
 
-    respJson = gqlproxy.post(query=query, variables=variables)
+    json = {"query": query, "variables": variables}
+    response = requests.post(url=GQLUG_ENDPOINT_URL, json=json)
+    respJson = response.json()
+
     assert respJson.get("errors", None) is None, respJson["errors"]
     respdata = respJson.get("data", None)
     assert respdata is not None, "during roles reading roles have not been readed"

@@ -148,7 +148,7 @@ class GroupTypeResultGQLModel:
         return result
     
 @strawberry.mutation(
-    description="""Allows a update of group, also it allows to change the mastergroup of the group""",
+    description="""Allows a update of group type""",
     permission_classes=[
         OnlyForAuthentized,
         OnlyForAdmins
@@ -157,7 +157,7 @@ async def group_type_update(self, info: strawberry.types.Info, group_type: Group
     return await encapsulateUpdate(info, GroupTypeGQLModel.getLoader(info), group_type, GroupTypeResultGQLModel(id=group_type.id, msg="ok"))
 
 @strawberry.mutation(
-    description="""Inserts a group""",
+    description="""Inserts a group type""",
     permission_classes=[
         OnlyForAuthentized,
         OnlyForAdmins
