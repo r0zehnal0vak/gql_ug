@@ -8,6 +8,8 @@ asyncpg
 sqlalchemy
 sqlalchemy_utils
 
+prometheus-client
+
 pydantic
 starlette
 strawberry-graphql

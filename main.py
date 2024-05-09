@@ -156,6 +156,24 @@ graphql_app = GraphQLRouter(
 async def graphiql(request: Request):
     return await graphql_app.render_graphql_ide(request)
 
+# Implementation of SLI collection with prometheus python client.
+from prometheus_client import start_http_server, Summary, Histogram
+import time
+
+# Summary gets basic data about the time spent in a function.
+REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
+# Histogram creates latency buckets, I'm using defaults but custom bucket sizes can be set.
+HISTOGRAM = Histogram('request_latency_seconds', 'Latency created by processing request')
+start_http_server(8080)
+
+# Decorating functions is the simplest way to collect data.
+@REQUEST_TIME.time()
+@HISTOGRAM.time()
+#@app.post("/gql")
+def apollo_gql_slo_dummy(t):
+    time.sleep(t)
+    return 0
+
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
     DEMOE = os.getenv("DEMO", None)
