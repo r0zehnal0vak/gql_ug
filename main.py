@@ -144,6 +144,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 # app.mount("/gql", graphql_app)
 
+########################################################################################
+
 from prometheus_fastapi_instrumentator import Instrumentator
 Instrumentator().instrument(app, metric_namespace="gql_ug").expose(app, endpoint="/metrics")
 
@@ -173,6 +175,8 @@ start_http_server(8080)
 def apollo_gql_slo_dummy(t):
     time.sleep(t)
     return 0
+
+########################################################################################
 
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
