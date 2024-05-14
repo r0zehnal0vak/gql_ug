@@ -178,6 +178,11 @@ def apollo_gql_slo_dummy(t):
 
 ########################################################################################
 
+from prometheus_client import Histogram
+
+APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
+
+@APOLLO_GQL_HISTOGRAM.time()
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
     DEMOE = os.getenv("DEMO", None)
