@@ -145,40 +145,15 @@ app = FastAPI(lifespan=lifespan)
 # app.mount("/gql", graphql_app)
 
 ########################################################################################
+########################################################################################
+
+from prometheus_client import start_http_server, Histogram, Summary
+import time
+
+start_http_server(8080)
 
 from prometheus_fastapi_instrumentator import Instrumentator
 Instrumentator().instrument(app, metric_namespace="gql_ug").expose(app, endpoint="/metrics")
-
-graphql_app = GraphQLRouter(
-    schema,
-    context_getter=get_context
-)
-
-@app.get("/gql")
-async def graphiql(request: Request):
-    return await graphql_app.render_graphql_ide(request)
-
-# Implementation of SLI collection with prometheus python client.
-from prometheus_client import start_http_server, Summary, Histogram
-import time
-
-# Summary gets basic data about the time spent in a function.
-REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
-# Histogram creates latency buckets, I'm using defaults but custom bucket sizes can be set.
-HISTOGRAM = Histogram('request_latency_seconds', 'Latency created by processing request')
-start_http_server(8080)
-
-# Decorating functions is the simplest way to collect data.
-@REQUEST_TIME.time()
-@HISTOGRAM.time()
-#@app.post("/gql")
-def apollo_gql_slo_dummy(t):
-    time.sleep(t)
-    return 0
-
-########################################################################################
-
-from prometheus_client import Histogram
 
 APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
 
