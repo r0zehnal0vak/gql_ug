@@ -52,7 +52,7 @@ class MembershipGQLModel(BaseGQLModel):
         permission_classes=[
             OnlyForAuthentized
         ],
-        resolver=DBResolvers.MembershipModel.group(UserGQLModel)
+        resolver=DBResolvers.MembershipModel.user(UserGQLModel)
     )
 
     group = strawberry.field(
