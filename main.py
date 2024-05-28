@@ -116,6 +116,30 @@ class Item(BaseModel):
     variables: dict = {}
     operationName: str = None
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initizalizedEngine = await RunOnceAndReturnSessionMaker()
+    yield    
+
+app = FastAPI(lifespan=lifespan)
+# app.mount("/gql", graphql_app)
+
+########################################################################################
+########################################################################################
+
+from prometheus_client import start_http_server, Histogram, Summary
+import time
+
+start_http_server(8080)
+
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app, metric_namespace="gql_ug").expose(app, endpoint="/metrics")
+
+APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
+
+
+@APOLLO_GQL_HISTOGRAM.time()
 async def get_context(request: Request):
     asyncSessionMaker = await RunOnceAndReturnSessionMaker()
         
@@ -136,26 +160,11 @@ async def get_context(request: Request):
     logging.info(f"context created {result}")
     return result
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    initizalizedEngine = await RunOnceAndReturnSessionMaker()
-    yield
 
-app = FastAPI(lifespan=lifespan)
-# app.mount("/gql", graphql_app)
 
-########################################################################################
-########################################################################################
 
-from prometheus_client import start_http_server, Histogram, Summary
-import time
 
-start_http_server(8080)
 
-from prometheus_fastapi_instrumentator import Instrumentator
-Instrumentator().instrument(app, metric_namespace="gql_ug").expose(app, endpoint="/metrics")
-
-APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
 
 @APOLLO_GQL_HISTOGRAM.time()
 @app.post("/gql")
